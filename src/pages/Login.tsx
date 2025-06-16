@@ -38,7 +38,7 @@ export function Login() {
           <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center">
             <Activity className="h-6 w-6 text-white" />
           </div>
-          <CardTitle className="text-2xl font-bold">Welcome to MediCare</CardTitle>
+          <CardTitle className="text-2xl font-bold">Welcome to LASUTH</CardTitle>
           <CardDescription>
             Sign in to access the hospital management system
           </CardDescription>
