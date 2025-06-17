@@ -3,12 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { getPatient, updatePatient, getWards } from '@/services/database';
 import { Patient, Ward } from '@/types';
 import { toast } from 'sonner';
@@ -25,6 +26,7 @@ const patientSchema = z.object({
   bedNumber: z.string().optional(),
   diagnosis: z.string().min(3, 'Diagnosis must be at least 3 characters'),
   procedure: z.string().optional(),
+  procedureStatus: z.enum(['pending', 'reviewed', 'completed']).optional(),
   religion: z.string().optional(),
   tribe: z.string().optional(),
   occupation: z.string().optional(),
@@ -42,15 +44,21 @@ export function EditPatient() {
   const [wards, setWards] = useState<Ward[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
+    watch,
   } = useForm<PatientFormData>({
     resolver: zodResolver(patientSchema),
   });
+
+  const selectedWardId = watch('wardId');
+  const selectedStatus = watch('status');
+  const procedure = watch('procedure');
 
   useEffect(() => {
     const loadData = async () => {
@@ -79,6 +87,7 @@ export function EditPatient() {
             bedNumber: patientData.bedNumber || '',
             diagnosis: patientData.diagnosis,
             procedure: patientData.procedure || '',
+            procedureStatus: patientData.procedureStatus || 'pending',
             religion: patientData.religion || '',
             tribe: patientData.tribe || '',
             occupation: patientData.occupation || '',
@@ -98,8 +107,29 @@ export function EditPatient() {
     loadData();
   }, [id, reset]);
 
+  const getSelectedWard = () => {
+    return wards.find(ward => ward.id === selectedWardId);
+  };
+
+  const getAvailableBeds = (ward: Ward) => {
+    // If this is the current ward, add 1 to available beds since patient will be moved out
+    const adjustment = patient?.wardId === ward.id ? 1 : 0;
+    return ward.totalBeds - ward.occupiedBeds + adjustment;
+  };
+
   const onSubmit = async (data: PatientFormData) => {
     if (!id || !patient) return;
+    
+    setError(null);
+    
+    // Validate ward capacity if patient is being admitted to a new ward
+    if (data.wardId && data.status === 'admitted' && data.wardId !== patient.wardId) {
+      const selectedWard = getSelectedWard();
+      if (selectedWard && getAvailableBeds(selectedWard) <= 0) {
+        setError(`Ward ${selectedWard.name} is at full capacity. Please select a different ward or change patient status.`);
+        return;
+      }
+    }
     
     setSaving(true);
     
@@ -116,6 +146,7 @@ export function EditPatient() {
         bedNumber: data.bedNumber || undefined,
         diagnosis: data.diagnosis,
         procedure: data.procedure || undefined,
+        procedureStatus: data.procedure ? (data.procedureStatus || 'pending') : undefined,
         religion: data.religion || undefined,
         tribe: data.tribe || undefined,
         occupation: data.occupation || undefined,
@@ -136,8 +167,11 @@ export function EditPatient() {
       await updatePatient(id, updates);
       toast.success('Patient updated successfully!');
       navigate(`/patients/${id}`);
-    } catch (error) {
-      toast.error('Failed to update patient. Please try again.');
+    } catch (error: any) {
+      console.error('Error updating patient:', error);
+      const errorMessage = error.message || 'Failed to update patient. Please try again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -171,6 +205,8 @@ export function EditPatient() {
     );
   }
 
+  const selectedWard = getSelectedWard();
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="mb-6 sm:mb-8">
@@ -187,6 +223,15 @@ export function EditPatient() {
         </h1>
         <p className="text-gray-600">Update patient information and medical records</p>
       </div>
+
+      {error && (
+        <Alert className="mb-6 border-red-200 bg-red-50">
+          <AlertCircle className="h-4 w-4 text-red-600" />
+          <AlertDescription className="text-red-800">
+            {error}
+          </AlertDescription>
+        </Alert>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 sm:space-y-8">
         <Card>
@@ -312,12 +357,37 @@ export function EditPatient() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select a ward</option>
-                {wards.map((ward) => (
-                  <option key={ward.id} value={ward.id}>
-                    {ward.name} - {ward.department}
-                  </option>
-                ))}
+                {wards.map((ward) => {
+                  const availableBeds = getAvailableBeds(ward);
+                  const isDisabled = selectedStatus === 'admitted' && selectedWardId !== patient.wardId && availableBeds <= 0;
+                  
+                  return (
+                    <option 
+                      key={ward.id} 
+                      value={ward.id}
+                      disabled={isDisabled}
+                    >
+                      {ward.name} - {ward.department} ({availableBeds}/{ward.totalBeds} available)
+                      {isDisabled ? ' - FULL' : ''}
+                    </option>
+                  );
+                })}
               </select>
+              {selectedWard && selectedStatus === 'admitted' && selectedWardId !== patient.wardId && (
+                <div className="mt-2 p-3 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>{selectedWard.name}</strong> - {selectedWard.department}
+                  </p>
+                  <p className="text-sm text-blue-600">
+                    Available beds: {getAvailableBeds(selectedWard)} of {selectedWard.totalBeds}
+                  </p>
+                  {getAvailableBeds(selectedWard) <= 0 && (
+                    <p className="text-sm text-red-600 font-medium">
+                      ⚠️ This ward is at full capacity
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>
@@ -337,6 +407,21 @@ export function EditPatient() {
                 placeholder="Enter procedure"
               />
             </div>
+
+            {procedure && (
+              <div>
+                <Label htmlFor="procedureStatus">Procedure Status</Label>
+                <select
+                  id="procedureStatus"
+                  {...register('procedureStatus')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="reviewed">Reviewed</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+            )}
 
             <div className="md:col-span-2">
               <Label htmlFor="diagnosis">Diagnosis *</Label>
@@ -430,6 +515,7 @@ export function EditPatient() {
             type="button"
             variant="outline"
             onClick={() => navigate(`/patients/${id}`)}
+            disabled={saving}
           >
             Cancel
           </Button>

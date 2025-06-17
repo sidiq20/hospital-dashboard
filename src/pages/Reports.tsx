@@ -392,57 +392,6 @@ export function Reports() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Additional Insights */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Average Length of Stay</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center">
-              <p className="text-3xl font-bold text-blue-600">5.2</p>
-              <p className="text-sm text-gray-600">days</p>
-              <div className="mt-2 flex items-center justify-center gap-1">
-                <TrendingDown className="h-3 w-3 text-green-600" />
-                <span className="text-xs text-green-600">-0.3 days from last month</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Readmission Rate</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center">
-              <p className="text-3xl font-bold text-yellow-600">8.5%</p>
-              <p className="text-sm text-gray-600">within 30 days</p>
-              <div className="mt-2 flex items-center justify-center gap-1">
-                <TrendingUp className="h-3 w-3 text-red-600" />
-                <span className="text-xs text-red-600">+1.2% from last month</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Patient Satisfaction</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center">
-              <p className="text-3xl font-bold text-green-600">4.7</p>
-              <p className="text-sm text-gray-600">out of 5.0</p>
-              <div className="mt-2 flex items-center justify-center gap-1">
-                <TrendingUp className="h-3 w-3 text-green-600" />
-                <span className="text-xs text-green-600">+0.2 from last month</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }

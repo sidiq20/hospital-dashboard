@@ -21,6 +21,8 @@ export interface Patient {
   bedNumber?: string;
   diagnosis: string;
   procedure?: string;
+  procedureStatus?: 'pending' | 'reviewed' | 'completed';
+  procedureDate?: Date;
   religion?: string;
   tribe?: string;
   occupation?: string;
@@ -94,4 +96,24 @@ export interface DashboardStats {
   occupancyRate: number;
   admissionsToday: number;
   dischargesToday: number;
+  proceduresPending: number;
+  proceduresReviewed: number;
+  proceduresCompleted: number;
+  proceduresCompletedThisWeek: number;
+}
+
+export interface ProcedureAnalytics {
+  weeklyCompletionRate: {
+    week: string;
+    completed: number;
+    total: number;
+    rate: number;
+  }[];
+  currentWaitingList: number;
+  averageWaitTime: number;
+  proceduresByStatus: {
+    pending: number;
+    reviewed: number;
+    completed: number;
+  };
 }

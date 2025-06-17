@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Eye, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Trash2, Clock, FileText, CheckCircle, Activity } from 'lucide-react';
 import { Patient, Ward } from '@/types';
 import { subscribeToPatients, deletePatient, getWards } from '@/services/database';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,7 @@ export function Patients() {
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [procedureFilter, setProcedureFilter] = useState('all');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -63,7 +64,8 @@ export function Patients() {
       filtered = filtered.filter(patient =>
         patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         patient.diagnosis.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        patient.phone.includes(searchTerm)
+        patient.phone.includes(searchTerm) ||
+        (patient.procedure && patient.procedure.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
@@ -71,8 +73,18 @@ export function Patients() {
       filtered = filtered.filter(patient => patient.status === statusFilter);
     }
 
+    if (procedureFilter !== 'all') {
+      if (procedureFilter === 'has-procedure') {
+        filtered = filtered.filter(patient => patient.procedure);
+      } else if (procedureFilter === 'no-procedure') {
+        filtered = filtered.filter(patient => !patient.procedure);
+      } else {
+        filtered = filtered.filter(patient => patient.procedureStatus === procedureFilter);
+      }
+    }
+
     setFilteredPatients(filtered);
-  }, [patients, searchTerm, statusFilter]);
+  }, [patients, searchTerm, statusFilter, procedureFilter]);
 
   const handleDeletePatient = async (id: string) => {
     try {
@@ -97,9 +109,35 @@ export function Patients() {
     }
   };
 
+  const getProcedureStatusColor = (status?: string) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'reviewed': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'completed': return 'bg-green-100 text-green-800 border-green-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getProcedureStatusIcon = (status?: string) => {
+    switch (status) {
+      case 'pending': return Clock;
+      case 'reviewed': return FileText;
+      case 'completed': return CheckCircle;
+      default: return Activity;
+    }
+  };
+
   const getWardName = (wardId: string) => {
     const ward = wards.find(w => w.id === wardId);
     return ward ? `${ward.name} - ${ward.department}` : 'Not assigned';
+  };
+
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
   };
 
   if (loading) {
@@ -119,7 +157,7 @@ export function Patients() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Patients</h1>
-          <p className="text-gray-600">Manage patient records and information</p>
+          <p className="text-gray-600">Manage patient records and procedure status</p>
         </div>
         <Link to="/patients/new">
           <Button className="w-full sm:w-auto">
@@ -135,11 +173,11 @@ export function Patients() {
           <CardTitle>Filter Patients</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col lg:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Search by name, diagnosis, or phone..."
+                placeholder="Search by name, diagnosis, procedure, or phone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -160,6 +198,18 @@ export function Patients() {
               <option value="procedure">Procedure</option>
               <option value="done">Done</option>
             </select>
+            <select
+              value={procedureFilter}
+              onChange={(e) => setProcedureFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[150px]"
+            >
+              <option value="all">All Procedures</option>
+              <option value="has-procedure">Has Procedure</option>
+              <option value="no-procedure">No Procedure</option>
+              <option value="pending">Pending</option>
+              <option value="reviewed">Reviewed</option>
+              <option value="completed">Completed</option>
+            </select>
           </div>
         </CardContent>
       </Card>
@@ -171,79 +221,108 @@ export function Patients() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[200px]">Name</TableHead>
+                  <TableHead className="min-w-[200px]">Patient Info</TableHead>
                   <TableHead className="hidden sm:table-cell">Age</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="hidden md:table-cell">Ward</TableHead>
-                  <TableHead className="hidden lg:table-cell min-w-[200px]">Diagnosis</TableHead>
+                  <TableHead className="hidden md:table-cell min-w-[200px]">Diagnosis</TableHead>
+                  <TableHead className="hidden lg:table-cell min-w-[200px]">Procedure</TableHead>
                   <TableHead className="hidden xl:table-cell">Admission Date</TableHead>
                   <TableHead className="text-right min-w-[120px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPatients.map((patient) => (
-                  <TableRow key={patient.id} className="hover:bg-gray-50">
-                    <TableCell className="font-medium">
-                      <div>
-                        <p className="font-medium text-gray-900">{patient.name}</p>
-                        <p className="text-sm text-gray-600 sm:hidden">Age: {patient.age}</p>
-                        <p className="text-sm text-gray-600">{patient.phone}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">{patient.age}</TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusColor(patient.status)} className="text-xs">
-                        {patient.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {patient.wardId ? `${getWardName(patient.wardId)}${patient.bedNumber ? ` - ${patient.bedNumber}` : ''}` : 'Not assigned'}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      <div className="max-w-xs truncate" title={patient.diagnosis}>
-                        {patient.diagnosis}
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden xl:table-cell">
-                      {new Date(patient.admissionDate).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Link to={`/patients/${patient.id}`}>
-                          <Button variant="ghost" size="sm" title="View Details">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </Link>
-                        <Link to={`/patients/${patient.id}/edit`}>
-                          <Button variant="ghost" size="sm" title="Edit Patient">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </Link>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm" title="Delete Patient">
-                              <Trash2 className="h-4 w-4" />
+                {filteredPatients.map((patient) => {
+                  const ProcedureIcon = getProcedureStatusIcon(patient.procedureStatus);
+                  
+                  return (
+                    <TableRow key={patient.id} className="hover:bg-gray-50">
+                      <TableCell className="font-medium">
+                        <div>
+                          <p className="font-medium text-gray-900">{patient.name}</p>
+                          <p className="text-sm text-gray-600 sm:hidden">Age: {patient.age}</p>
+                          <p className="text-sm text-gray-600">{patient.phone}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">{patient.age}</TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusColor(patient.status)} className="text-xs">
+                          {patient.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <div className="max-w-xs">
+                          <p className="truncate font-medium" title={patient.diagnosis}>
+                            {patient.diagnosis}
+                          </p>
+                          {patient.wardId && (
+                            <p className="text-xs text-gray-500 truncate">
+                              {getWardName(patient.wardId)}
+                              {patient.bedNumber && ` - Bed ${patient.bedNumber}`}
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {patient.procedure ? (
+                          <div className="max-w-xs">
+                            <p className="truncate font-medium text-sm" title={patient.procedure}>
+                              {patient.procedure}
+                            </p>
+                            <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border mt-1 ${getProcedureStatusColor(patient.procedureStatus)}`}>
+                              <ProcedureIcon className="h-3 w-3" />
+                              {patient.procedureStatus || 'pending'}
+                            </div>
+                            {patient.procedureDate && patient.procedureStatus === 'completed' && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Completed: {formatDate(patient.procedureDate)}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-sm">No procedure</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden xl:table-cell">
+                        {formatDate(patient.admissionDate)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Link to={`/patients/${patient.id}`}>
+                            <Button variant="ghost" size="sm" title="View Details">
+                              <Eye className="h-4 w-4" />
                             </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete the patient record for {patient.name}.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeletePatient(patient.id)}>
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          </Link>
+                          <Link to={`/patients/${patient.id}/edit`}>
+                            <Button variant="ghost" size="sm" title="Edit Patient">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" title="Delete Patient">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete the patient record for {patient.name}.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeletePatient(patient.id)}>
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

@@ -9,25 +9,36 @@ import {
   Percent,
   TrendingUp,
   TrendingDown,
-  Eye
+  Eye,
+  Clock,
+  CheckCircle,
+  FileText,
+  Calendar,
+  Activity
 } from 'lucide-react';
 import { StatCard } from '@/components/ui/stat-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { getDashboardStats, subscribeToPatients } from '@/services/database';
-import { DashboardStats, Patient } from '@/types';
+import { Progress } from '@/components/ui/progress';
+import { getDashboardStats, subscribeToPatients, getProcedureAnalytics } from '@/services/database';
+import { DashboardStats, Patient, ProcedureAnalytics } from '@/types';
 
 export function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentPatients, setRecentPatients] = useState<Patient[]>([]);
+  const [procedureAnalytics, setProcedureAnalytics] = useState<ProcedureAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadStats = async () => {
       try {
-        const dashboardStats = await getDashboardStats();
+        const [dashboardStats, analytics] = await Promise.all([
+          getDashboardStats(),
+          getProcedureAnalytics()
+        ]);
         setStats(dashboardStats);
+        setProcedureAnalytics(analytics);
       } catch (error) {
         console.error('Error loading dashboard stats:', error);
       } finally {
@@ -39,7 +50,7 @@ export function Dashboard() {
 
     // Subscribe to recent patients
     const unsubscribe = subscribeToPatients((patients) => {
-      setRecentPatients(patients.slice(0, 5));
+      setRecentPatients(patients.slice(0, 8));
     });
 
     return unsubscribe;
@@ -60,17 +71,32 @@ export function Dashboard() {
     );
   }
 
-  if (!stats) return null;
+  if (!stats || !procedureAnalytics) return null;
 
-  const getStatusColor = (status: string) => {
+  const getProcedureStatusColor = (status?: string) => {
     switch (status) {
-      case 'admitted': return 'default';
-      case 'discharged': return 'secondary';
-      case 'critical': return 'destructive';
-      case 'stable': return 'secondary';
-      case 'in-treatment': return 'default';
-      default: return 'outline';
+      case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'reviewed': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'completed': return 'bg-green-100 text-green-800 border-green-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
+  };
+
+  const getProcedureStatusIcon = (status?: string) => {
+    switch (status) {
+      case 'pending': return Clock;
+      case 'reviewed': return FileText;
+      case 'completed': return CheckCircle;
+      default: return Activity;
+    }
+  };
+
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
   };
 
   return (
@@ -80,7 +106,7 @@ export function Dashboard() {
         <p className="text-gray-600">Welcome back! Here's what's happening at your hospital today.</p>
       </div>
 
-      {/* Stats Grid */}
+      {/* Main Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <StatCard
           title="Total Patients"
@@ -108,42 +134,43 @@ export function Dashboard() {
         />
       </div>
 
+      {/* Procedure Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <StatCard
-          title="Total Wards"
-          value={stats.totalWards}
-          icon={Building2}
-          color="blue"
-        />
-        <StatCard
-          title="Admissions Today"
-          value={stats.admissionsToday}
-          icon={TrendingUp}
-          trend={{ value: 12, isPositive: true }}
-          color="green"
-        />
-        <StatCard
-          title="Discharges Today"
-          value={stats.dischargesToday}
-          icon={TrendingDown}
+          title="Procedures Pending"
+          value={stats.proceduresPending}
+          icon={Clock}
           color="yellow"
         />
         <StatCard
-          title="Discharged Total"
-          value={stats.dischargedPatients}
-          icon={UserX}
+          title="Cases Reviewed"
+          value={stats.proceduresReviewed}
+          icon={FileText}
+          color="blue"
+        />
+        <StatCard
+          title="Procedures Done"
+          value={stats.proceduresCompleted}
+          icon={CheckCircle}
+          color="green"
+        />
+        <StatCard
+          title="Completed This Week"
+          value={stats.proceduresCompletedThisWeek}
+          icon={TrendingUp}
+          trend={{ value: 15, isPositive: true }}
           color="green"
         />
       </div>
 
       {/* Content Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
-        {/* Recent Patients */}
-        <Card>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8">
+        {/* Recent Patients with Procedures */}
+        <Card className="xl:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <div>
               <CardTitle>Recent Patients</CardTitle>
-              <CardDescription>Latest patient admissions</CardDescription>
+              <CardDescription>Latest patient admissions with procedure status</CardDescription>
             </div>
             <Link to="/patients">
               <Button variant="outline" size="sm">
@@ -154,22 +181,37 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentPatients.map((patient) => (
-                <div key={patient.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate">{patient.name}</p>
-                    <p className="text-sm text-gray-600 truncate">{patient.diagnosis}</p>
+              {recentPatients.map((patient) => {
+                const StatusIcon = getProcedureStatusIcon(patient.procedureStatus);
+                return (
+                  <div key={patient.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-2">
+                        <p className="font-medium text-gray-900 truncate">{patient.name}</p>
+                        <span className="text-sm text-gray-500">Age: {patient.age}</span>
+                      </div>
+                      <p className="text-sm text-gray-600 truncate mb-1">{patient.diagnosis}</p>
+                      {patient.procedure && (
+                        <p className="text-sm text-blue-600 truncate">Procedure: {patient.procedure}</p>
+                      )}
+                      <p className="text-xs text-gray-500">
+                        Admitted: {formatDate(patient.admissionDate)}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2 ml-4">
+                      {patient.procedure && (
+                        <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getProcedureStatusColor(patient.procedureStatus)}`}>
+                          <StatusIcon className="h-3 w-3" />
+                          {patient.procedureStatus || 'pending'}
+                        </div>
+                      )}
+                      <Badge variant="outline" className="text-xs">
+                        {patient.status}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 ml-4">
-                    <Badge 
-                      variant={getStatusColor(patient.status)}
-                      className="text-xs"
-                    >
-                      {patient.status}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               {recentPatients.length === 0 && (
                 <div className="text-center py-8">
                   <p className="text-gray-500">No recent patients</p>
@@ -179,52 +221,164 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common tasks and shortcuts</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Link to="/patients" className="block">
-                <button className="w-full p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group">
-                  <div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center mb-3 group-hover:bg-blue-200 transition-colors">
-                    <Users className="h-4 w-4 text-blue-600" />
+        {/* Procedure Analytics */}
+        <div className="space-y-6">
+          {/* Procedure Status Overview */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Procedure Status Overview</CardTitle>
+              <CardDescription>Current procedure pipeline</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <span className="text-sm font-medium">Pending</span>
                   </div>
-                  <p className="font-medium text-gray-900">View Patients</p>
-                  <p className="text-sm text-gray-600">Manage patient records</p>
-                </button>
-              </Link>
-              
-              <Link to="/patients/new" className="block">
-                <button className="w-full p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group">
-                  <div className="h-8 w-8 bg-green-100 rounded-lg flex items-center justify-center mb-3 group-hover:bg-green-200 transition-colors">
-                    <UserCheck className="h-4 w-4 text-green-600" />
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold">{procedureAnalytics.proceduresByStatus.pending}</span>
                   </div>
-                  <p className="font-medium text-gray-900">Add Patient</p>
-                  <p className="text-sm text-gray-600">Register new patient</p>
-                </button>
-              </Link>
-              
-              <button className="w-full p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group">
-                <div className="h-8 w-8 bg-purple-100 rounded-lg flex items-center justify-center mb-3 group-hover:bg-purple-200 transition-colors">
-                  <AlertTriangle className="h-4 w-4 text-purple-600" />
                 </div>
-                <p className="font-medium text-gray-900">Emergency</p>
-                <p className="text-sm text-gray-600">Critical patient alerts</p>
-              </button>
-              
-              <button className="w-full p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group">
-                <div className="h-8 w-8 bg-orange-100 rounded-lg flex items-center justify-center mb-3 group-hover:bg-orange-200 transition-colors">
-                  <TrendingUp className="h-4 w-4 text-orange-600" />
+                <Progress 
+                  value={(procedureAnalytics.proceduresByStatus.pending / (procedureAnalytics.proceduresByStatus.pending + procedureAnalytics.proceduresByStatus.reviewed + procedureAnalytics.proceduresByStatus.completed)) * 100} 
+                  className="h-2"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                    <span className="text-sm font-medium">Reviewed</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold">{procedureAnalytics.proceduresByStatus.reviewed}</span>
+                  </div>
                 </div>
-                <p className="font-medium text-gray-900">Reports</p>
-                <p className="text-sm text-gray-600">View analytics</p>
-              </button>
-            </div>
-          </CardContent>
-        </Card>
+                <Progress 
+                  value={(procedureAnalytics.proceduresByStatus.reviewed / (procedureAnalytics.proceduresByStatus.pending + procedureAnalytics.proceduresByStatus.reviewed + procedureAnalytics.proceduresByStatus.completed)) * 100} 
+                  className="h-2"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                    <span className="text-sm font-medium">Completed</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold">{procedureAnalytics.proceduresByStatus.completed}</span>
+                  </div>
+                </div>
+                <Progress 
+                  value={(procedureAnalytics.proceduresByStatus.completed / (procedureAnalytics.proceduresByStatus.pending + procedureAnalytics.proceduresByStatus.reviewed + procedureAnalytics.proceduresByStatus.completed)) * 100} 
+                  className="h-2"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Weekly Completion Rate */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Weekly Performance</CardTitle>
+              <CardDescription>Procedure completion metrics</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-green-600">
+                  {procedureAnalytics.weeklyCompletionRate.length > 0 
+                    ? procedureAnalytics.weeklyCompletionRate[procedureAnalytics.weeklyCompletionRate.length - 1].rate.toFixed(1)
+                    : 0}%
+                </p>
+                <p className="text-sm text-gray-600">Completion Rate This Week</p>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Patients Waiting</span>
+                  <span className="font-semibold text-orange-600">{procedureAnalytics.currentWaitingList}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Avg. Wait Time</span>
+                  <span className="font-semibold">{procedureAnalytics.averageWaitTime} days</span>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t">
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Last 4 Weeks</h4>
+                <div className="space-y-2">
+                  {procedureAnalytics.weeklyCompletionRate.slice(-4).map((week, index) => (
+                    <div key={index} className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">{week.week}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-900">{week.completed}/{week.total}</span>
+                        <span className={`font-medium ${week.rate >= 80 ? 'text-green-600' : week.rate >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {week.rate.toFixed(0)}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+              <CardDescription>Common tasks and shortcuts</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 gap-3">
+                <Link to="/patients" className="block">
+                  <button className="w-full p-3 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                        <Users className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">View Patients</p>
+                        <p className="text-xs text-gray-600">Manage patient records</p>
+                      </div>
+                    </div>
+                  </button>
+                </Link>
+                
+                <Link to="/patients/new" className="block">
+                  <button className="w-full p-3 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
+                        <UserCheck className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">Add Patient</p>
+                        <p className="text-xs text-gray-600">Register new patient</p>
+                      </div>
+                    </div>
+                  </button>
+                </Link>
+                
+                <Link to="/reports" className="block">
+                  <button className="w-full p-3 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                        <TrendingUp className="h-4 w-4 text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">Analytics</p>
+                        <p className="text-xs text-gray-600">View detailed reports</p>
+                      </div>
+                    </div>
+                  </button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

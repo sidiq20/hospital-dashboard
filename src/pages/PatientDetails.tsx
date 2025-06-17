@@ -14,10 +14,12 @@ import {
   Clock,
   AlertCircle,
   FileText,
-  MessageSquare
+  MessageSquare,
+  CheckCircle,
+  Activity
 } from 'lucide-react';
 import { Patient, PatientNote, Appointment, Ward } from '@/types';
-import { getPatient, addPatientNote, scheduleAppointment, getWards } from '@/services/database';
+import { getPatient, addPatientNote, scheduleAppointment, getWards, updatePatient } from '@/services/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,6 +49,7 @@ export function PatientDetails() {
     type: 'consultation' as 'consultation' | 'procedure' | 'follow-up' | 'surgery' | 'therapy'
   });
   const [schedulingAppointment, setSchedulingAppointment] = useState(false);
+  const [updatingProcedure, setUpdatingProcedure] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -137,6 +140,25 @@ export function PatientDetails() {
     }
   };
 
+  const handleUpdateProcedureStatus = async (newStatus: 'pending' | 'reviewed' | 'completed') => {
+    if (!patient) return;
+
+    setUpdatingProcedure(true);
+    try {
+      await updatePatient(patient.id, { procedureStatus: newStatus });
+      
+      // Refresh patient data
+      const updatedPatient = await getPatient(patient.id);
+      setPatient(updatedPatient);
+      
+      toast.success(`Procedure status updated to ${newStatus}`);
+    } catch (error) {
+      toast.error('Failed to update procedure status');
+    } finally {
+      setUpdatingProcedure(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'admitted': return 'default';
@@ -158,6 +180,24 @@ export function PatientDetails() {
       case 'in-treatment': return Stethoscope;
       case 'procedure': return Stethoscope;
       default: return User;
+    }
+  };
+
+  const getProcedureStatusColor = (status?: string) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'reviewed': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'completed': return 'bg-green-100 text-green-800 border-green-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getProcedureStatusIcon = (status?: string) => {
+    switch (status) {
+      case 'pending': return Clock;
+      case 'reviewed': return FileText;
+      case 'completed': return CheckCircle;
+      default: return Activity;
     }
   };
 
@@ -183,6 +223,16 @@ export function PatientDetails() {
   const getWardName = (wardId: string) => {
     const ward = wards.find(w => w.id === wardId);
     return ward ? `${ward.name} - ${ward.department}` : wardId;
+  };
+
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   if (loading) {
@@ -216,6 +266,7 @@ export function PatientDetails() {
   }
 
   const StatusIcon = getStatusIcon(patient.status);
+  const ProcedureIcon = getProcedureStatusIcon(patient.procedureStatus);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -474,8 +525,54 @@ export function PatientDetails() {
               
               {patient.procedure && (
                 <div>
-                  <p className="text-sm font-medium text-gray-500 mb-2">Procedure</p>
-                  <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">{patient.procedure}</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-medium text-gray-500">Procedure</p>
+                    {userProfile && (userProfile.role === 'doctor' || userProfile.role === 'admin') && (
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleUpdateProcedureStatus('pending')}
+                          disabled={updatingProcedure || patient.procedureStatus === 'pending'}
+                          className="text-xs"
+                        >
+                          Pending
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleUpdateProcedureStatus('reviewed')}
+                          disabled={updatingProcedure || patient.procedureStatus === 'reviewed'}
+                          className="text-xs"
+                        >
+                          Reviewed
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleUpdateProcedureStatus('completed')}
+                          disabled={updatingProcedure || patient.procedureStatus === 'completed'}
+                          className="text-xs"
+                        >
+                          Completed
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-gray-900 mb-2">{patient.procedure}</p>
+                    <div className="flex items-center justify-between">
+                      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getProcedureStatusColor(patient.procedureStatus)}`}>
+                        <ProcedureIcon className="h-3 w-3" />
+                        {patient.procedureStatus || 'pending'}
+                      </div>
+                      {patient.procedureDate && patient.procedureStatus === 'completed' && (
+                        <p className="text-xs text-gray-500">
+                          Completed: {formatDate(patient.procedureDate)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -545,13 +642,7 @@ export function PatientDetails() {
                 <div>
                   <p className="text-sm font-medium text-gray-900">Admitted</p>
                   <p className="text-xs text-gray-500">
-                    {new Date(patient.admissionDate).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
+                    {formatDate(patient.admissionDate)}
                   </p>
                 </div>
               </div>
@@ -562,13 +653,19 @@ export function PatientDetails() {
                   <div>
                     <p className="text-sm font-medium text-gray-900">Discharged</p>
                     <p className="text-xs text-gray-500">
-                      {new Date(patient.dischargeDate).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                      {formatDate(patient.dischargeDate)}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {patient.procedureDate && (
+                <div className="flex items-start gap-3">
+                  <div className="h-2 w-2 rounded-full bg-purple-600 mt-2 flex-shrink-0"></div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Procedure Completed</p>
+                    <p className="text-xs text-gray-500">
+                      {formatDate(patient.procedureDate)}
                     </p>
                   </div>
                 </div>
