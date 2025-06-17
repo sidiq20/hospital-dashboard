@@ -34,7 +34,7 @@ export function Sidebar({ onClose }: SidebarProps) {
   );
 
   return (
-    <div className="flex h-full w-64 flex-col bg-white border-r border-gray-200 shadow-lg">
+    <div className="flex h-screen w-64 flex-col bg-white border-r border-gray-200 shadow-lg fixed top-0 left-0 z-40">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
         <div className="flex items-center gap-2">
@@ -48,8 +48,8 @@ export function Sidebar({ onClose }: SidebarProps) {
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-3 py-4">
+      {/* Navigation - scrollable section */}
+      <nav className="flex-1 overflow-y-auto px-3 py-4">
         {filteredNavigation.map((item) => (
           <NavLink
             key={item.name}
@@ -70,7 +70,7 @@ export function Sidebar({ onClose }: SidebarProps) {
         ))}
       </nav>
 
-      {/* User Profile */}
+      {/* Logout - pinned to bottom */}
       <div className="border-t border-gray-200 p-4">
         <div className="flex items-center gap-3 mb-4">
           <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center flex-shrink-0">
