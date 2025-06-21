@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { 
-  Users, 
+  UserCheck, 
   Search, 
   Plus, 
   Edit, 
@@ -9,8 +9,7 @@ import {
   Mail,
   Building2,
   Award,
-  Calendar,
-  UserCheck
+  Calendar
 } from 'lucide-react';
 import { User } from '@/types';
 import { getUsers, createUser } from '@/services/database';
@@ -43,118 +42,110 @@ import { toast } from 'sonner';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-export function Staff() {
-  const [staff, setStaff] = useState<User[]>([]);
-  const [filteredStaff, setFilteredStaff] = useState<User[]>([]);
+export function Consultants() {
+  const [consultants, setConsultants] = useState<User[]>([]);
+  const [filteredConsultants, setFilteredConsultants] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<User | null>(null);
+  const [editingConsultant, setEditingConsultant] = useState<User | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
     department: '',
-    specialization: '',
-    role: 'doctor' as 'doctor' | 'consultant'
+    specialization: ''
   });
   const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
-    const loadStaff = async () => {
+    const loadConsultants = async () => {
       try {
         const users = await getUsers();
-        setStaff(users);
+        const consultantUsers = users.filter(user => user.role === 'consultant');
+        setConsultants(consultantUsers);
       } catch (error) {
-        console.error('Error loading staff:', error);
-        toast.error('Failed to load staff data');
+        console.error('Error loading consultants:', error);
+        toast.error('Failed to load consultants data');
       } finally {
         setLoading(false);
       }
     };
 
-    loadStaff();
+    loadConsultants();
   }, []);
 
   useEffect(() => {
-    let filtered = staff;
+    let filtered = consultants;
 
     if (searchTerm) {
-      filtered = filtered.filter(member =>
-        (member.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (member.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (member.department && member.department.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (member.specialization && member.specialization.toLowerCase().includes(searchTerm.toLowerCase()))
+      filtered = filtered.filter(consultant =>
+        (consultant.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (consultant.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (consultant.department && consultant.department.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (consultant.specialization && consultant.specialization.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
-    if (roleFilter !== 'all') {
-      filtered = filtered.filter(member => member.role === roleFilter);
-    }
+    setFilteredConsultants(filtered);
+  }, [consultants, searchTerm]);
 
-    setFilteredStaff(filtered);
-  }, [staff, searchTerm, roleFilter]);
-
-  const handleEditStaff = (member: User) => {
-    setEditingStaff(member);
+  const handleEditConsultant = (consultant: User) => {
+    setEditingConsultant(consultant);
     setFormData({
-      name: member.name || '',
-      email: member.email || '',
-      phone: member.phone || '',
-      department: member.department || '',
-      specialization: member.specialization || '',
-      role: member.role
+      name: consultant.name || '',
+      email: consultant.email || '',
+      phone: consultant.phone || '',
+      department: consultant.department || '',
+      specialization: consultant.specialization || ''
     });
     setEditDialogOpen(true);
   };
 
-  const handleAddStaff = () => {
+  const handleAddConsultant = () => {
     setFormData({
       name: '',
       email: '',
       phone: '',
       department: '',
-      specialization: '',
-      role: 'doctor'
+      specialization: ''
     });
     setAddDialogOpen(true);
   };
 
-  const handleUpdateStaff = async () => {
-    if (!editingStaff) return;
+  const handleUpdateConsultant = async () => {
+    if (!editingConsultant) return;
 
     setUpdating(true);
     try {
-      const docRef = doc(db, 'users', editingStaff.id);
+      const docRef = doc(db, 'users', editingConsultant.id);
       await updateDoc(docRef, {
         name: formData.name,
         phone: formData.phone || undefined,
         department: formData.department || undefined,
-        specialization: formData.specialization || undefined,
-        role: formData.role
+        specialization: formData.specialization || undefined
       });
 
       // Update local state
-      setStaff(prev => prev.map(member => 
-        member.id === editingStaff.id 
-          ? { ...member, ...formData, phone: formData.phone || undefined, department: formData.department || undefined, specialization: formData.specialization || undefined }
-          : member
+      setConsultants(prev => prev.map(consultant => 
+        consultant.id === editingConsultant.id 
+          ? { ...consultant, ...formData, phone: formData.phone || undefined, department: formData.department || undefined, specialization: formData.specialization || undefined }
+          : consultant
       ));
 
       setEditDialogOpen(false);
-      setEditingStaff(null);
-      toast.success('Staff member updated successfully');
+      setEditingConsultant(null);
+      toast.success('Consultant updated successfully');
     } catch (error) {
-      console.error('Error updating staff member:', error);
-      toast.error('Failed to update staff member');
+      console.error('Error updating consultant:', error);
+      toast.error('Failed to update consultant');
     } finally {
       setUpdating(false);
     }
   };
 
-  const handleCreateStaff = async () => {
+  const handleCreateConsultant = async () => {
     if (!formData.name || !formData.email) {
       toast.error('Name and email are required');
       return;
@@ -162,45 +153,37 @@ export function Staff() {
 
     setUpdating(true);
     try {
-      const staffData = {
+      const consultantData = {
         name: formData.name,
         email: formData.email,
-        role: formData.role,
+        role: 'consultant' as const,
         phone: formData.phone || undefined,
         department: formData.department || undefined,
         specialization: formData.specialization || undefined
       };
 
-      const docId = await createUser(staffData);
+      const docId = await createUser(consultantData);
       
       // Update local state
-      setStaff(prev => [...prev, { id: docId, ...staffData, createdAt: new Date() }]);
+      setConsultants(prev => [...prev, { id: docId, ...consultantData, createdAt: new Date() }]);
 
       setAddDialogOpen(false);
-      toast.success('Staff member added successfully');
+      toast.success('Consultant added successfully');
     } catch (error) {
-      console.error('Error creating staff member:', error);
-      toast.error('Failed to create staff member');
+      console.error('Error creating consultant:', error);
+      toast.error('Failed to create consultant');
     } finally {
       setUpdating(false);
     }
   };
 
-  const handleDeleteStaff = async (id: string) => {
+  const handleDeleteConsultant = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'users', id));
-      setStaff(prev => prev.filter(member => member.id !== id));
-      toast.success('Staff member deleted successfully');
+      setConsultants(prev => prev.filter(consultant => consultant.id !== id));
+      toast.success('Consultant deleted successfully');
     } catch (error) {
-      toast.error('Failed to delete staff member');
-    }
-  };
-
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'doctor': return 'default';
-      case 'consultant': return 'secondary';
-      default: return 'outline';
+      toast.error('Failed to delete consultant');
     }
   };
 
@@ -220,110 +203,49 @@ export function Staff() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Staff Management</h1>
-          <p className="text-gray-600">Manage hospital staff members and their roles</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Consultants</h1>
+          <p className="text-gray-600">Manage hospital consultants and their specializations</p>
         </div>
-        <Button onClick={handleAddStaff} className="w-full sm:w-auto">
+        <Button onClick={handleAddConsultant} className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
-          Add Staff Member
+          Add Consultant
         </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-700">Total Staff</p>
-                <p className="text-2xl font-bold text-blue-900">{staff.length}</p>
-              </div>
-              <div className="h-12 w-12 bg-blue-200 rounded-lg flex items-center justify-center">
-                <Users className="h-6 w-6 text-blue-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-700">Doctors</p>
-                <p className="text-2xl font-bold text-green-900">
-                  {staff.filter(member => member.role === 'doctor').length}
-                </p>
-              </div>
-              <div className="h-12 w-12 bg-green-200 rounded-lg flex items-center justify-center">
-                <UserCheck className="h-6 w-6 text-green-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-700">Consultants</p>
-                <p className="text-2xl font-bold text-purple-900">
-                  {staff.filter(member => member.role === 'consultant').length}
-                </p>
-              </div>
-              <div className="h-12 w-12 bg-purple-200 rounded-lg flex items-center justify-center">
-                <Award className="h-6 w-6 text-purple-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-yellow-700">Departments</p>
-                <p className="text-2xl font-bold text-yellow-900">
-                  {new Set(staff.filter(member => member.department).map(member => member.department)).size}
-                </p>
-              </div>
-              <div className="h-12 w-12 bg-yellow-200 rounded-lg flex items-center justify-center">
-                <Building2 className="h-6 w-6 text-yellow-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search and Filters */}
+      {/* Stats Card */}
       <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Search Staff</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search by name, email, department, or specialization..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Consultants</p>
+              <p className="text-2xl font-bold text-gray-900">{consultants.length}</p>
             </div>
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[150px]"
-            >
-              <option value="all">All Roles</option>
-              <option value="doctor">Doctors</option>
-              <option value="consultant">Consultants</option>
-            </select>
+            <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <UserCheck className="h-6 w-6 text-blue-600" />
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Staff Table */}
+      {/* Search */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Search Consultants</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search by name, email, department, or specialization..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Consultants Table */}
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -331,7 +253,6 @@ export function Staff() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="min-w-[200px]">Name</TableHead>
-                  <TableHead>Role</TableHead>
                   <TableHead className="hidden sm:table-cell">Specialization</TableHead>
                   <TableHead className="hidden md:table-cell">Department</TableHead>
                   <TableHead className="hidden lg:table-cell">Contact</TableHead>
@@ -340,45 +261,40 @@ export function Staff() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredStaff.map((member) => {
-                  const memberName = member.name || 'Unknown';
-                  const memberEmail = member.email || 'No email';
+                {filteredConsultants.map((consultant) => {
+                  const consultantName = consultant.name || 'Unknown';
+                  const consultantEmail = consultant.email || 'No email';
                   
                   return (
-                    <TableRow key={member.id} className="hover:bg-gray-50">
+                    <TableRow key={consultant.id} className="hover:bg-gray-50">
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center flex-shrink-0">
-                            <span className="text-sm font-semibold text-blue-700">
-                              {memberName.charAt(0).toUpperCase()}
+                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center flex-shrink-0">
+                            <span className="text-sm font-semibold text-green-700">
+                              {consultantName.charAt(0).toUpperCase()}
                             </span>
                           </div>
                           <div>
-                            <p className="font-medium text-gray-900">{memberName}</p>
-                            <p className="text-sm text-gray-600">{memberEmail}</p>
+                            <p className="font-medium text-gray-900">{consultantName}</p>
+                            <p className="text-sm text-gray-600">{consultantEmail}</p>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={getRoleColor(member.role)} className="capitalize">
-                          {member.role}
-                        </Badge>
-                      </TableCell>
                       <TableCell className="hidden sm:table-cell">
-                        {member.specialization ? (
-                          <div className="flex items-center gap-2">
-                            <Award className="h-4 w-4 text-gray-400" />
-                            <span>{member.specialization}</span>
-                          </div>
+                        {consultant.specialization ? (
+                          <Badge variant="outline" className="flex items-center gap-1 w-fit">
+                            <Award className="h-3 w-3" />
+                            {consultant.specialization}
+                          </Badge>
                         ) : (
                           <span className="text-gray-400">Not specified</span>
                         )}
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        {member.department ? (
+                        {consultant.department ? (
                           <div className="flex items-center gap-2">
                             <Building2 className="h-4 w-4 text-gray-400" />
-                            <span>{member.department}</span>
+                            <span>{consultant.department}</span>
                           </div>
                         ) : (
                           <span className="text-gray-400">Not assigned</span>
@@ -386,22 +302,22 @@ export function Staff() {
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
                         <div className="space-y-1">
-                          {member.phone && (
+                          {consultant.phone && (
                             <div className="flex items-center gap-2 text-sm">
                               <Phone className="h-3 w-3 text-gray-400" />
-                              <span>{member.phone}</span>
+                              <span>{consultant.phone}</span>
                             </div>
                           )}
                           <div className="flex items-center gap-2 text-sm">
                             <Mail className="h-3 w-3 text-gray-400" />
-                            <span className="truncate max-w-[200px]">{memberEmail}</span>
+                            <span className="truncate max-w-[200px]">{consultantEmail}</span>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="hidden xl:table-cell">
                         <div className="flex items-center gap-2 text-sm">
                           <Calendar className="h-3 w-3 text-gray-400" />
-                          {member.createdAt ? new Date(member.createdAt).toLocaleDateString() : 'Unknown'}
+                          {consultant.createdAt ? new Date(consultant.createdAt).toLocaleDateString() : 'Unknown'}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
@@ -409,27 +325,27 @@ export function Staff() {
                           <Button 
                             variant="ghost" 
                             size="sm" 
-                            title="Edit Staff Member"
-                            onClick={() => handleEditStaff(member)}
+                            title="Edit Consultant"
+                            onClick={() => handleEditConsultant(consultant)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" title="Delete Staff Member">
+                              <Button variant="ghost" size="sm" title="Delete Consultant">
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Staff Member</AlertDialogTitle>
+                                <AlertDialogTitle>Delete Consultant</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Are you sure you want to delete {memberName}? This action cannot be undone.
+                                  Are you sure you want to delete {consultantName}? This action cannot be undone.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDeleteStaff(member.id)}>
+                                <AlertDialogAction onClick={() => handleDeleteConsultant(consultant.id)}>
                                   Delete
                                 </AlertDialogAction>
                               </AlertDialogFooter>
@@ -443,24 +359,24 @@ export function Staff() {
               </TableBody>
             </Table>
           </div>
-          {filteredStaff.length === 0 && (
+          {filteredConsultants.length === 0 && (
             <div className="text-center py-12">
-              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No staff members found matching your criteria.</p>
-              <Button onClick={handleAddStaff} className="mt-4">
+              <UserCheck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">No consultants found matching your criteria.</p>
+              <Button onClick={handleAddConsultant} className="mt-4">
                 <Plus className="h-4 w-4 mr-2" />
-                Add First Staff Member
+                Add First Consultant
               </Button>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Edit Staff Dialog */}
+      {/* Edit Consultant Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Staff Member</DialogTitle>
+            <DialogTitle>Edit Consultant</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -471,18 +387,6 @@ export function Staff() {
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Enter full name"
               />
-            </div>
-            <div>
-              <Label htmlFor="editRole">Role</Label>
-              <select
-                id="editRole"
-                value={formData.role}
-                onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value as 'doctor' | 'consultant' }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="doctor">Doctor</option>
-                <option value="consultant">Consultant</option>
-              </select>
             </div>
             <div>
               <Label htmlFor="editPhone">Phone</Label>
@@ -513,11 +417,11 @@ export function Staff() {
             </div>
             <div className="flex gap-2 pt-4">
               <Button 
-                onClick={handleUpdateStaff} 
+                onClick={handleUpdateConsultant} 
                 disabled={updating || !formData.name.trim()}
                 className="flex-1"
               >
-                {updating ? 'Updating...' : 'Update Staff Member'}
+                {updating ? 'Updating...' : 'Update Consultant'}
               </Button>
               <Button 
                 variant="outline" 
@@ -531,11 +435,11 @@ export function Staff() {
         </DialogContent>
       </Dialog>
 
-      {/* Add Staff Dialog */}
+      {/* Add Consultant Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add New Staff Member</DialogTitle>
+            <DialogTitle>Add New Consultant</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -556,18 +460,6 @@ export function Staff() {
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 placeholder="Enter email address"
               />
-            </div>
-            <div>
-              <Label htmlFor="addRole">Role</Label>
-              <select
-                id="addRole"
-                value={formData.role}
-                onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value as 'doctor' | 'consultant' }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="doctor">Doctor</option>
-                <option value="consultant">Consultant</option>
-              </select>
             </div>
             <div>
               <Label htmlFor="addPhone">Phone</Label>
@@ -598,11 +490,11 @@ export function Staff() {
             </div>
             <div className="flex gap-2 pt-4">
               <Button 
-                onClick={handleCreateStaff} 
+                onClick={handleCreateConsultant} 
                 disabled={updating || !formData.name.trim() || !formData.email.trim()}
                 className="flex-1"
               >
-                {updating ? 'Adding...' : 'Add Staff Member'}
+                {updating ? 'Adding...' : 'Add Consultant'}
               </Button>
               <Button 
                 variant="outline" 

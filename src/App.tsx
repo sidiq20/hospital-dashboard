@@ -9,9 +9,12 @@ import { Patients } from '@/pages/Patients';
 import { AddPatient } from '@/pages/AddPatient';
 import { PatientDetails } from '@/pages/PatientDetails';
 import { EditPatient } from '@/pages/EditPatient';
+import { MyPatients } from '@/pages/MyPatients';
+import { MyCases } from '@/pages/MyCases';
 import { Wards } from '@/pages/Wards';
 import { AddWard } from '@/pages/AddWard';
 import { EditWard } from '@/pages/EditWard';
+import { Consultants } from '@/pages/Consultants';
 import { Staff } from '@/pages/Staff';
 import { Reports } from '@/pages/Reports';
 import { Toaster } from '@/components/ui/sonner';
@@ -46,9 +49,12 @@ function AppContent() {
                   <Route path="/patients/new" element={<AddPatient />} />
                   <Route path="/patients/:id" element={<PatientDetails />} />
                   <Route path="/patients/:id/edit" element={<EditPatient />} />
+                  <Route path="/my-patients" element={<MyPatients />} />
+                  <Route path="/my-cases" element={<MyCases />} />
                   <Route path="/wards" element={<Wards />} />
                   <Route path="/wards/new" element={<AddWard />} />
                   <Route path="/wards/:id/edit" element={<EditWard />} />
+                  <Route path="/consultants" element={<Consultants />} />
                   <Route path="/staff" element={<Staff />} />
                   <Route path="/reports" element={<Reports />} />
                 </Routes>

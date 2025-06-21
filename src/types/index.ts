@@ -2,9 +2,10 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'doctor' | 'nurse' | 'reception';
+  role: 'doctor' | 'consultant';
   phone?: string;
   department?: string;
+  specialization?: string;
   createdAt: Date;
 }
 
@@ -16,26 +17,31 @@ export interface Patient {
   phone: string;
   email?: string;
   address: string;
-  status: 'admitted' | 'discharged' | 'in-treatment' | 'critical' | 'stable' | 'review' | 'procedure' | 'done';
-  wardId?: string;
-  bedNumber?: string;
+  admissionStatus: 'inpatient' | 'outpatient';
+  status: 'active' | 'discharged' | 'done';
+  wardId?: string; // Only for inpatients
+  bedNumber?: string; // Added bed number field
   diagnosis: string;
   procedure?: string;
   procedureStatus?: 'pending' | 'reviewed' | 'completed';
   procedureDate?: Date;
+  consultantId?: string; // Added when procedure is marked as done
+  consultantName?: string;
+  doctorId?: string; // Doctor who created the patient
+  doctorName?: string; // Name of doctor who created the patient
   religion?: string;
   tribe?: string;
   occupation?: string;
-  emergencyContact: {
+  emergencyContact?: { // Made optional
     name: string;
     phone: string;
     relationship: string;
   };
   admissionDate: Date;
   dischargeDate?: Date;
-  doctorId?: string;
   notes: PatientNote[];
   appointments: Appointment[];
+  biopsyResults: BiopsyResult[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -64,12 +70,21 @@ export interface Appointment {
   createdAt: Date;
 }
 
+export interface BiopsyResult {
+  id: string;
+  title: string;
+  description?: string;
+  result: string;
+  performedBy: string;
+  performedByName: string;
+  performedDate: Date;
+  createdAt: Date;
+}
+
 export interface Ward {
   id: string;
   name: string;
   department: string;
-  totalBeds: number;
-  occupiedBeds: number;
   wardType: 'general' | 'icu' | 'emergency' | 'surgery' | 'maternity' | 'pediatric';
   createdAt: Date;
 }
@@ -115,5 +130,31 @@ export interface ProcedureAnalytics {
     pending: number;
     reviewed: number;
     completed: number;
+  };
+}
+
+export interface Consultant {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  specialization: string;
+  department?: string;
+  experience: number; // years
+  qualifications: string[];
+  isActive: boolean;
+  createdAt: Date;
+}
+
+export interface ExportData {
+  patients: Patient[];
+  wards: Ward[];
+  stats: DashboardStats;
+  procedureAnalytics: ProcedureAnalytics;
+  exportDate: Date;
+  dateRange: {
+    start: Date;
+    end: Date;
+    type: 'day' | 'week' | 'month' | 'year' | 'custom';
   };
 }

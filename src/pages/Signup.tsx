@@ -15,8 +15,9 @@ export function Signup() {
     password: '',
     confirmPassword: '',
     phone: '',
-    role: 'reception' as 'admin' | 'doctor' | 'nurse' | 'reception',
-    department: ''
+    role: 'doctor' as 'doctor' | 'consultant',
+    department: '',
+    specialization: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -44,7 +45,8 @@ export function Signup() {
         name: formData.name,
         role: formData.role,
         phone: formData.phone,
-        department: formData.department || undefined
+        department: formData.department || undefined,
+        specialization: formData.specialization || undefined
       });
       navigate('/');
       toast.success('Account created successfully! Welcome to MediCare.');
@@ -76,7 +78,7 @@ export function Signup() {
             <Activity className="h-8 w-8 text-white" />
           </div>
           <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-            Join LASUTH Team
+            Join MediCare Team
           </CardTitle>
           <CardDescription className="text-lg text-gray-600">
             Create your account to access the hospital management system
@@ -135,25 +137,37 @@ export function Signup() {
                   onChange={handleInputChange}
                   className="w-full h-12 px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                 >
-                  <option value="reception">Reception</option>
-                  <option value="nurse">Nurse</option>
                   <option value="doctor">Doctor</option>
-                  <option value="admin">Administrator</option>
+                  <option value="consultant">Consultant</option>
                 </select>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="department" className="text-sm font-semibold text-gray-700">Department (Optional)</Label>
-              <Input
-                id="department"
-                name="department"
-                type="text"
-                value={formData.department}
-                onChange={handleInputChange}
-                placeholder="e.g., Cardiology, Emergency, Surgery"
-                className="h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="department" className="text-sm font-semibold text-gray-700">Department</Label>
+                <Input
+                  id="department"
+                  name="department"
+                  type="text"
+                  value={formData.department}
+                  onChange={handleInputChange}
+                  placeholder="e.g., Cardiology, Emergency, Surgery"
+                  className="h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="specialization" className="text-sm font-semibold text-gray-700">Specialization</Label>
+                <Input
+                  id="specialization"
+                  name="specialization"
+                  type="text"
+                  value={formData.specialization}
+                  onChange={handleInputChange}
+                  placeholder="e.g., Cardiologist, Surgeon"
+                  className="h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

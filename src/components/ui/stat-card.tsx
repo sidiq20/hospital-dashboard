@@ -1,33 +1,53 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { LucideIcon } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 interface StatCardProps {
   title: string;
-  value: string | number;
+  value: number | string;
   icon: LucideIcon;
-  color?: 'blue' | 'green' | 'red' | 'yellow' | 'purple';
+  color: 'blue' | 'green' | 'purple' | 'yellow' | 'red';
   trend?: {
     value: number;
     isPositive: boolean;
   };
 }
 
-export function StatCard({ title, value, icon: Icon, color = 'blue', trend }: StatCardProps) {
+export function StatCard({ title, value, icon: Icon, color, trend }: StatCardProps) {
   const colorClasses = {
-    blue: 'bg-blue-100 text-blue-600',
-    green: 'bg-green-100 text-green-600',
-    red: 'bg-red-100 text-red-600',
-    yellow: 'bg-yellow-100 text-yellow-600',
-    purple: 'bg-purple-100 text-purple-600',
+    blue: 'from-blue-50 to-blue-100 border-blue-200 text-blue-700',
+    green: 'from-green-50 to-green-100 border-green-200 text-green-700',
+    purple: 'from-purple-50 to-purple-100 border-purple-200 text-purple-700',
+    yellow: 'from-yellow-50 to-yellow-100 border-yellow-200 text-yellow-700',
+    red: 'from-red-50 to-red-100 border-red-200 text-red-700',
+  };
+
+  const iconColorClasses = {
+    blue: 'bg-blue-200 text-blue-700',
+    green: 'bg-green-200 text-green-700',
+    purple: 'bg-purple-200 text-purple-700',
+    yellow: 'bg-yellow-200 text-yellow-700',
+    red: 'bg-red-200 text-red-700',
+  };
+
+  const valueColorClasses = {
+    blue: 'text-blue-900',
+    green: 'text-green-900',
+    purple: 'text-purple-900',
+    yellow: 'text-yellow-900',
+    red: 'text-red-900',
   };
 
   return (
-    <Card>
+    <Card className={`bg-gradient-to-br ${colorClasses[color]}`}>
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-600">{title}</p>
-            <p className="text-2xl font-bold text-gray-900">{value}</p>
+            <p className={`text-sm font-medium ${colorClasses[color]}`}>
+              {title}
+            </p>
+            <p className={`text-2xl font-bold ${valueColorClasses[color]}`}>
+              {value}
+            </p>
             {trend && (
               <div className="flex items-center gap-1 mt-1">
                 <span className={`text-xs ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
@@ -36,7 +56,7 @@ export function StatCard({ title, value, icon: Icon, color = 'blue', trend }: St
               </div>
             )}
           </div>
-          <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${colorClasses[color]}`}>
+          <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${iconColorClasses[color]}`}>
             <Icon className="h-6 w-6" />
           </div>
         </div>

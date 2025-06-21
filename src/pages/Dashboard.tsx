@@ -3,26 +3,26 @@ import { Link } from 'react-router-dom';
 import { 
   Users, 
   UserCheck, 
-  UserX, 
-  AlertTriangle, 
-  Building2, 
-  Percent,
   TrendingUp,
-  TrendingDown,
   Eye,
   Clock,
   CheckCircle,
   FileText,
-  Calendar,
   Activity
 } from 'lucide-react';
 import { StatCard } from '@/components/ui/stat-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { getDashboardStats, subscribeToPatients, getProcedureAnalytics } from '@/services/database';
 import { DashboardStats, Patient, ProcedureAnalytics } from '@/types';
+import { 
+  PieChart, 
+  Pie, 
+  Cell, 
+  ResponsiveContainer, 
+  Tooltip 
+} from 'recharts';
 
 export function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -58,7 +58,7 @@ export function Dashboard() {
 
   if (loading) {
     return (
-      <div className="p-4 sm:p-6 lg:p-8">
+      <div className="p-4 sm:p-6 lg:p-8 bg-white min-h-screen">
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
@@ -99,15 +99,34 @@ export function Dashboard() {
     });
   };
 
+  // Prepare procedure status data for pie chart
+  const procedureStatusData = [
+    {
+      name: 'Pending',
+      value: procedureAnalytics.proceduresByStatus.pending,
+      color: '#f59e0b'
+    },
+    {
+      name: 'Reviewed',
+      value: procedureAnalytics.proceduresByStatus.reviewed,
+      color: '#3b82f6'
+    },
+    {
+      name: 'Completed',
+      value: procedureAnalytics.proceduresByStatus.completed,
+      color: '#10b981'
+    }
+  ].filter(item => item.value > 0);
+
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8 bg-white min-h-screen">
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
         <p className="text-gray-600">Welcome back! Here's what's happening at your hospital today.</p>
       </div>
 
       {/* Main Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <StatCard
           title="Total Patients"
           value={stats.totalPatients}
@@ -115,21 +134,15 @@ export function Dashboard() {
           color="blue"
         />
         <StatCard
-          title="Admitted"
+          title="Active Patients"
           value={stats.admittedPatients}
           icon={UserCheck}
           color="green"
         />
         <StatCard
-          title="Critical"
-          value={stats.criticalPatients}
-          icon={AlertTriangle}
-          color="red"
-        />
-        <StatCard
-          title="Occupancy Rate"
-          value={`${stats.occupancyRate.toFixed(1)}%`}
-          icon={Percent}
+          title="Admissions Today"
+          value={stats.admissionsToday}
+          icon={TrendingUp}
           color="purple"
         />
       </div>
@@ -166,11 +179,11 @@ export function Dashboard() {
       {/* Content Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8">
         {/* Recent Patients with Procedures */}
-        <Card className="xl:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <Card className="xl:col-span-2 bg-white border border-gray-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 bg-white">
             <div>
-              <CardTitle>Recent Patients</CardTitle>
-              <CardDescription>Latest patient admissions with procedure status</CardDescription>
+              <CardTitle className="text-gray-900">Recent Patients</CardTitle>
+              <CardDescription className="text-gray-600">Latest patient admissions with procedure status</CardDescription>
             </div>
             <Link to="/patients">
               <Button variant="outline" size="sm">
@@ -179,7 +192,7 @@ export function Dashboard() {
               </Button>
             </Link>
           </CardHeader>
-          <CardContent>
+          <CardContent className="bg-white">
             <div className="space-y-4">
               {recentPatients.map((patient) => {
                 const StatusIcon = getProcedureStatusIcon(patient.procedureStatus);
@@ -221,72 +234,51 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Procedure Analytics */}
+        {/* Procedure Status Pie Chart */}
         <div className="space-y-6">
-          {/* Procedure Status Overview */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Procedure Status Overview</CardTitle>
-              <CardDescription>Current procedure pipeline</CardDescription>
+          <Card className="bg-white border border-gray-200">
+            <CardHeader className="bg-white">
+              <CardTitle className="text-gray-900">Procedure Status Distribution</CardTitle>
+              <CardDescription className="text-gray-600">Current procedure pipeline</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                    <span className="text-sm font-medium">Pending</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold">{procedureAnalytics.proceduresByStatus.pending}</span>
-                  </div>
+            <CardContent className="bg-white">
+              {procedureStatusData.length > 0 ? (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={procedureStatusData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {procedureStatusData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-                <Progress 
-                  value={(procedureAnalytics.proceduresByStatus.pending / (procedureAnalytics.proceduresByStatus.pending + procedureAnalytics.proceduresByStatus.reviewed + procedureAnalytics.proceduresByStatus.completed)) * 100} 
-                  className="h-2"
-                />
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                    <span className="text-sm font-medium">Reviewed</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold">{procedureAnalytics.proceduresByStatus.reviewed}</span>
-                  </div>
+              ) : (
+                <div className="h-64 flex items-center justify-center">
+                  <p className="text-gray-500">No procedures to display</p>
                 </div>
-                <Progress 
-                  value={(procedureAnalytics.proceduresByStatus.reviewed / (procedureAnalytics.proceduresByStatus.pending + procedureAnalytics.proceduresByStatus.reviewed + procedureAnalytics.proceduresByStatus.completed)) * 100} 
-                  className="h-2"
-                />
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                    <span className="text-sm font-medium">Completed</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold">{procedureAnalytics.proceduresByStatus.completed}</span>
-                  </div>
-                </div>
-                <Progress 
-                  value={(procedureAnalytics.proceduresByStatus.completed / (procedureAnalytics.proceduresByStatus.pending + procedureAnalytics.proceduresByStatus.reviewed + procedureAnalytics.proceduresByStatus.completed)) * 100} 
-                  className="h-2"
-                />
-              </div>
+              )}
             </CardContent>
           </Card>
 
           {/* Weekly Completion Rate */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Weekly Performance</CardTitle>
-              <CardDescription>Procedure completion metrics</CardDescription>
+          <Card className="bg-white border border-gray-200">
+            <CardHeader className="bg-white">
+              <CardTitle className="text-gray-900">Weekly Performance</CardTitle>
+              <CardDescription className="text-gray-600">Procedure completion metrics</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 bg-white">
               <div className="text-center">
                 <p className="text-2xl font-bold text-green-600">
                   {procedureAnalytics.weeklyCompletionRate.length > 0 
@@ -303,7 +295,7 @@ export function Dashboard() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Avg. Wait Time</span>
-                  <span className="font-semibold">{procedureAnalytics.averageWaitTime} days</span>
+                  <span className="font-semibold text-gray-900">{procedureAnalytics.averageWaitTime} days</span>
                 </div>
               </div>
 
@@ -327,15 +319,15 @@ export function Dashboard() {
           </Card>
 
           {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Common tasks and shortcuts</CardDescription>
+          <Card className="bg-white border border-gray-200">
+            <CardHeader className="bg-white">
+              <CardTitle className="text-gray-900">Quick Actions</CardTitle>
+              <CardDescription className="text-gray-600">Common tasks and shortcuts</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="bg-white">
               <div className="grid grid-cols-1 gap-3">
                 <Link to="/patients" className="block">
-                  <button className="w-full p-3 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group">
+                  <button className="w-full p-3 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group bg-white">
                     <div className="flex items-center gap-3">
                       <div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
                         <Users className="h-4 w-4 text-blue-600" />
@@ -349,7 +341,7 @@ export function Dashboard() {
                 </Link>
                 
                 <Link to="/patients/new" className="block">
-                  <button className="w-full p-3 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group">
+                  <button className="w-full p-3 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group bg-white">
                     <div className="flex items-center gap-3">
                       <div className="h-8 w-8 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
                         <UserCheck className="h-4 w-4 text-green-600" />
@@ -363,7 +355,7 @@ export function Dashboard() {
                 </Link>
                 
                 <Link to="/reports" className="block">
-                  <button className="w-full p-3 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group">
+                  <button className="w-full p-3 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group bg-white">
                     <div className="flex items-center gap-3">
                       <div className="h-8 w-8 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
                         <TrendingUp className="h-4 w-4 text-purple-600" />

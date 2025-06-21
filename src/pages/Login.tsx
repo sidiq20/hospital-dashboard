@@ -38,7 +38,7 @@ export function Login() {
           <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center">
             <Activity className="h-6 w-6 text-white" />
           </div>
-          <CardTitle className="text-2xl font-bold">Welcome to LASUTH</CardTitle>
+          <CardTitle className="text-2xl font-bold">Welcome to MediCare</CardTitle>
           <CardDescription>
             Sign in to access the hospital management system
           </CardDescription>
@@ -100,9 +100,8 @@ export function Login() {
                 Demo accounts:
               </p>
               <div className="text-xs text-gray-500 space-y-1">
-                <p>Admin: admin@hospital.com / admin123</p>
                 <p>Doctor: doctor@hospital.com / doctor123</p>
-                <p>Nurse: nurse@hospital.com / nurse123</p>
+                <p>Consultant: consultant@hospital.com / consultant123</p>
               </div>
             </div>
           </div>

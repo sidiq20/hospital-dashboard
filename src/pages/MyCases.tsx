@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, Clock, FileText, CheckCircle, Activity, Filter } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Clock, FileText, CheckCircle, Activity, UserCheck, Calendar } from 'lucide-react';
 import { Patient, Ward } from '@/types';
-import { subscribeToPatients, deletePatient, getWards } from '@/services/database';
+import { subscribeToPatients, getWards } from '@/services/database';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,29 +15,15 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { toast } from 'sonner';
 
-export function Patients() {
+export function MyCases() {
   const navigate = useNavigate();
   const { userProfile } = useAuth();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [procedureFilter, setProcedureFilter] = useState('all');
-  const [weekFilter, setWeekFilter] = useState('all');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -53,70 +38,34 @@ export function Patients() {
 
     loadWards();
 
-    const unsubscribe = subscribeToPatients((patients) => {
-      setPatients(patients);
+    const unsubscribe = subscribeToPatients((allPatients) => {
+      // Filter patients assigned to current consultant
+      if (userProfile) {
+        const myCases = allPatients.filter(patient => 
+          patient.consultantId === userProfile.id && patient.status === 'done'
+        );
+        setPatients(myCases);
+      }
+      
       setLoading(false);
     });
 
     return unsubscribe;
-  }, []);
-
-  const getWeeklyData = () => {
-    const weeks = [];
-    const now = new Date();
-    
-    // Generate last 8 weeks
-    for (let i = 7; i >= 0; i--) {
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - (now.getDay() + (i * 7)));
-      weekStart.setHours(0, 0, 0, 0);
-      
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-      weekEnd.setHours(23, 59, 59, 999);
-      
-      weeks.push({
-        week: weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        weekStart,
-        weekEnd
-      });
-    }
-    
-    return weeks;
-  };
+  }, [userProfile]);
 
   useEffect(() => {
     let filtered = patients;
 
-    // Week filter
-    if (weekFilter !== 'all') {
-      const weeklyData = getWeeklyData();
-      const selectedWeek = weeklyData[parseInt(weekFilter)];
-      
-      if (selectedWeek) {
-        filtered = filtered.filter(patient => {
-          const admissionDate = new Date(patient.admissionDate);
-          return admissionDate >= selectedWeek.weekStart && admissionDate <= selectedWeek.weekEnd;
-        });
-      }
-    }
-
-    // Search filter
     if (searchTerm) {
       filtered = filtered.filter(patient =>
         patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         patient.diagnosis.toLowerCase().includes(searchTerm.toLowerCase()) ||
         patient.phone.includes(searchTerm) ||
-        (patient.procedure && patient.procedure.toLowerCase().includes(searchTerm.toLowerCase()))
+        (patient.procedure && patient.procedure.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (patient.doctorName && patient.doctorName.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
-    // Status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(patient => patient.status === statusFilter);
-    }
-
-    // Procedure filter
     if (procedureFilter !== 'all') {
       if (procedureFilter === 'has-procedure') {
         filtered = filtered.filter(patient => patient.procedure);
@@ -128,28 +77,10 @@ export function Patients() {
     }
 
     setFilteredPatients(filtered);
-  }, [patients, searchTerm, statusFilter, procedureFilter, weekFilter]);
-
-  const handleDeletePatient = async (id: string) => {
-    try {
-      await deletePatient(id);
-      toast.success('Patient deleted successfully');
-    } catch (error) {
-      toast.error('Failed to delete patient');
-    }
-  };
+  }, [patients, searchTerm, procedureFilter]);
 
   const handleRowClick = (patientId: string) => {
     navigate(`/patients/${patientId}`);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'default';
-      case 'discharged': return 'secondary';
-      case 'done': return 'secondary';
-      default: return 'outline';
-    }
   };
 
   const getProcedureStatusColor = (status?: string) => {
@@ -221,11 +152,9 @@ export function Patients() {
     });
   };
 
-  const weeklyData = getWeeklyData();
-
   if (loading) {
     return (
-      <div className="w-full p-4 sm:p-6 lg:p-8 bg-white min-h-screen">
+      <div className="w-full p-4 sm:p-6 lg:p-8">
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
           <div className="h-64 bg-gray-200 rounded"></div>
@@ -235,20 +164,44 @@ export function Patients() {
   }
 
   return (
-    <div className="w-full p-4 sm:p-6 lg:p-8 bg-white min-h-screen">
+    <div className="w-full p-4 sm:p-6 lg:p-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Patients</h1>
-          <p className="text-gray-600">Manage patient records and procedure status</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">My Cases</h1>
+          <p className="text-gray-600">Patients assigned to you as consultant</p>
         </div>
-        <Link to="/patients/new">
-          <Button className="w-full sm:w-auto">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Patient
-          </Button>
-        </Link>
       </div>
+
+      {/* Stats Card */}
+      <Card className="mb-6">
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-blue-600">{patients.length}</p>
+              <p className="text-sm text-gray-600">Total Cases</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-green-600">
+                {patients.filter(p => p.procedure && p.procedureStatus === 'completed').length}
+              </p>
+              <p className="text-sm text-gray-600">Completed Procedures</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-yellow-600">
+                {patients.filter(p => p.procedure && p.procedureStatus === 'pending').length}
+              </p>
+              <p className="text-sm text-gray-600">Pending Procedures</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-purple-600">
+                {patients.filter(p => !p.procedure).length}
+              </p>
+              <p className="text-sm text-gray-600">No Procedures</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Color Legend */}
       <Card className="mb-6 bg-white border border-gray-200">
@@ -278,50 +231,25 @@ export function Patients() {
       </Card>
 
       {/* Filters */}
-      <Card className="mb-6 bg-white border border-gray-200">
-        <CardHeader className="bg-white">
-          <CardTitle className="text-gray-900">Filter Patients</CardTitle>
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Filter Cases</CardTitle>
         </CardHeader>
-        <CardContent className="bg-white">
+        <CardContent>
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Search by name, diagnosis, procedure, or phone..."
+                placeholder="Search by name, diagnosis, procedure, doctor, or phone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-white border-gray-300"
+                className="pl-10"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-gray-500" />
-              <select
-                value={weekFilter}
-                onChange={(e) => setWeekFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[150px] bg-white"
-              >
-                <option value="all">All Weeks</option>
-                {weeklyData.map((week, index) => (
-                  <option key={index} value={index.toString()}>
-                    Week of {week.week}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[150px] bg-white"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="discharged">Discharged</option>
-              <option value="done">Done</option>
-            </select>
             <select
               value={procedureFilter}
               onChange={(e) => setProcedureFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[150px] bg-white"
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[150px]"
             >
               <option value="all">All Procedures</option>
               <option value="has-procedure">Has Procedure</option>
@@ -334,25 +262,24 @@ export function Patients() {
         </CardContent>
       </Card>
 
-      {/* Patients Table */}
-      <Card className="bg-white border border-gray-200">
-        <CardContent className="p-0 bg-white">
+      {/* Cases Table */}
+      <Card>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-white border-b border-gray-200">
-                  <TableHead className="min-w-[200px] text-gray-900">Patient Info</TableHead>
-                  <TableHead className="hidden sm:table-cell text-gray-900">Age</TableHead>
-                  <TableHead className="hidden md:table-cell min-w-[200px] text-gray-900">Diagnosis</TableHead>
-                  <TableHead className="hidden lg:table-cell min-w-[200px] text-gray-900">Procedure</TableHead>
-                  <TableHead className="hidden xl:table-cell text-gray-900">Admission Date</TableHead>
-                  <TableHead className="text-right min-w-[120px] text-gray-900">Actions</TableHead>
+                <TableRow>
+                  <TableHead className="min-w-[200px]">Patient Info</TableHead>
+                  <TableHead className="hidden sm:table-cell">Age</TableHead>
+                  <TableHead className="hidden md:table-cell min-w-[200px]">Diagnosis</TableHead>
+                  <TableHead className="hidden lg:table-cell min-w-[200px]">Procedure</TableHead>
+                  <TableHead className="hidden xl:table-cell">Doctor</TableHead>
+                  <TableHead className="hidden xl:table-cell">Admission Date</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody className="bg-white">
+              <TableBody>
                 {filteredPatients.map((patient) => {
                   const ProcedureIcon = getProcedureStatusIcon(patient.procedureStatus);
-                  const canDelete = userProfile?.role === 'consultant' || userProfile?.role === 'doctor';
                   
                   return (
                     <TableRow 
@@ -366,26 +293,23 @@ export function Patients() {
                           <p className="text-sm text-gray-600 sm:hidden">Age: {patient.age}</p>
                           <p className="text-sm text-gray-600">{patient.phone}</p>
                           <div className="flex flex-wrap items-center gap-2 mt-1">
-                            <Badge variant={getStatusColor(patient.status)} className="text-xs">
-                              {patient.status}
+                            <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                              <CheckCircle className="h-3 w-3" />
+                              Done
                             </Badge>
-                            {patient.doctorName && (
-                              <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                                Dr. {patient.doctorName}
-                              </span>
-                            )}
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className={`hidden sm:table-cell ${getCellBackgroundColor(patient)} text-gray-900`}>{patient.age}</TableCell>
+                      <TableCell className={`hidden sm:table-cell ${getCellBackgroundColor(patient)}`}>{patient.age}</TableCell>
                       <TableCell className={`hidden md:table-cell ${getCellBackgroundColor(patient)}`}>
                         <div className="max-w-xs">
-                          <p className="truncate font-medium text-gray-900" title={patient.diagnosis}>
+                          <p className="truncate font-medium" title={patient.diagnosis}>
                             {patient.diagnosis}
                           </p>
                           {patient.wardId && (
                             <p className="text-xs text-gray-500 truncate">
                               {getWardName(patient.wardId)}
+                              {patient.bedNumber && ` - Bed ${patient.bedNumber}`}
                             </p>
                           )}
                         </div>
@@ -393,7 +317,7 @@ export function Patients() {
                       <TableCell className={`hidden lg:table-cell ${getCellBackgroundColor(patient)}`}>
                         {patient.procedure ? (
                           <div className="max-w-xs">
-                            <p className="truncate font-medium text-sm text-gray-900" title={patient.procedure}>
+                            <p className="truncate font-medium text-sm" title={patient.procedure}>
                               {patient.procedure}
                             </p>
                             <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border mt-1 ${getProcedureStatusColor(patient.procedureStatus)}`}>
@@ -410,39 +334,20 @@ export function Patients() {
                           <span className="text-gray-400 text-sm">No procedure</span>
                         )}
                       </TableCell>
-                      <TableCell className={`hidden xl:table-cell ${getCellBackgroundColor(patient)} text-gray-900`}>
-                        {formatDate(patient.admissionDate)}
+                      <TableCell className={`hidden xl:table-cell ${getCellBackgroundColor(patient)}`}>
+                        {patient.doctorName ? (
+                          <div className="flex items-center gap-2">
+                            <UserCheck className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm">Dr. {patient.doctorName}</span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-sm">Unknown</span>
+                        )}
                       </TableCell>
-                      <TableCell className={`text-right ${getCellBackgroundColor(patient)}`}>
-                        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                          <Link to={`/patients/${patient.id}/edit`}>
-                            <Button variant="ghost" size="sm" title="Edit Patient">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                          {canDelete && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="sm" title="Delete Patient">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent className="bg-white">
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle className="text-gray-900">Are you sure?</AlertDialogTitle>
-                                  <AlertDialogDescription className="text-gray-600">
-                                    This action cannot be undone. This will permanently delete the patient record for {patient.name}.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel className="bg-white text-gray-900 border-gray-300">Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDeletePatient(patient.id)}>
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          )}
+                      <TableCell className={`hidden xl:table-cell ${getCellBackgroundColor(patient)}`}>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm">{formatDate(patient.admissionDate)}</span>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -452,14 +357,12 @@ export function Patients() {
             </Table>
           </div>
           {filteredPatients.length === 0 && (
-            <div className="text-center py-12 bg-white">
-              <p className="text-gray-500">No patients found matching your criteria.</p>
-              <Link to="/patients/new" className="inline-block mt-4">
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add First Patient
-                </Button>
-              </Link>
+            <div className="text-center py-12">
+              <UserCheck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">No cases found matching your criteria.</p>
+              <p className="text-sm text-gray-400 mt-2">
+                Cases will appear here when doctors mark patients as done and assign them to you.
+              </p>
             </div>
           )}
         </CardContent>

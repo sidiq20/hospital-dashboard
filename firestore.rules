@@ -8,42 +8,40 @@ service cloud.firestore {
     
     function isAdmin() {
       return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
     function isDoctor() {
       return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'doctor';
     }
     
-    function isNurse() {
+    function isConsultant() {
       return isAuthenticated() && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'nurse';
-    }
-    
-    function isReception() {
-      return isAuthenticated() && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'reception';
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'consultant';
     }
     
     function isStaff() {
-      return isAdmin() || isDoctor() || isNurse() || isReception();
+      return isDoctor() || isConsultant();
     }
     
     // Users collection
     match /users/{userId} {
       // Allow users to read their own profile
       allow read: if request.auth != null && request.auth.uid == userId;
-      // Allow admins to read all user profiles (for staff management)
-      allow read: if isAdmin();
+      // Allow staff to read all user profiles (for staff management)
+      allow read: if isStaff();
       // Allow authenticated users to read basic user info (for displaying names, etc.)
       allow read: if isAuthenticated();
-      // Allow user creation during signup
-      allow create: if request.auth.uid == userId;
-      // Allow admins to create users and users to update their own profile
-      allow update: if isAdmin() || request.auth.uid == userId;
-      // Only admins can delete users
-      allow delete: if isAdmin();
+      // Allow user creation during signup and allow staff to create users
+      allow create: if request.auth.uid == userId || isStaff();
+      // Allow staff to create users and users to update their own profile
+      allow update: if isStaff() || request.auth.uid == userId;
+      // Allow staff to delete users
+      allow delete: if isStaff();
     }
     
     // Patients collection
@@ -51,13 +49,16 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isStaff();
       allow update: if isStaff();
-      allow delete: if isAdmin();
+      // Only consultants can delete patients
+      allow delete: if isConsultant();
     }
     
     // Wards collection
     match /wards/{wardId} {
       allow read: if isAuthenticated();
-      allow write: if isStaff();
+      allow create: if isStaff();
+      allow update: if isStaff();
+      allow delete: if isStaff();
     }
     
     // Timeline collection
@@ -65,7 +66,7 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isStaff();
       allow update: if isStaff();
-      allow delete: if isAdmin();
+      allow delete: if isStaff();
     }
   }
 }

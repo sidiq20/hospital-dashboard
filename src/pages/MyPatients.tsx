@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, Clock, FileText, CheckCircle, Activity, Filter } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Clock, FileText, CheckCircle, Activity, UserPlus } from 'lucide-react';
 import { Patient, Ward } from '@/types';
 import { subscribeToPatients, deletePatient, getWards } from '@/services/database';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 
-export function Patients() {
+export function MyPatients() {
   const navigate = useNavigate();
   const { userProfile } = useAuth();
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -38,7 +38,6 @@ export function Patients() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [procedureFilter, setProcedureFilter] = useState('all');
-  const [weekFilter, setWeekFilter] = useState('all');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -53,55 +52,22 @@ export function Patients() {
 
     loadWards();
 
-    const unsubscribe = subscribeToPatients((patients) => {
-      setPatients(patients);
+    const unsubscribe = subscribeToPatients((allPatients) => {
+      // Filter patients created by current doctor
+      if (userProfile) {
+        const myPatients = allPatients.filter(patient => patient.doctorId === userProfile.id);
+        setPatients(myPatients);
+      }
+      
       setLoading(false);
     });
 
     return unsubscribe;
-  }, []);
-
-  const getWeeklyData = () => {
-    const weeks = [];
-    const now = new Date();
-    
-    // Generate last 8 weeks
-    for (let i = 7; i >= 0; i--) {
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - (now.getDay() + (i * 7)));
-      weekStart.setHours(0, 0, 0, 0);
-      
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-      weekEnd.setHours(23, 59, 59, 999);
-      
-      weeks.push({
-        week: weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        weekStart,
-        weekEnd
-      });
-    }
-    
-    return weeks;
-  };
+  }, [userProfile]);
 
   useEffect(() => {
     let filtered = patients;
 
-    // Week filter
-    if (weekFilter !== 'all') {
-      const weeklyData = getWeeklyData();
-      const selectedWeek = weeklyData[parseInt(weekFilter)];
-      
-      if (selectedWeek) {
-        filtered = filtered.filter(patient => {
-          const admissionDate = new Date(patient.admissionDate);
-          return admissionDate >= selectedWeek.weekStart && admissionDate <= selectedWeek.weekEnd;
-        });
-      }
-    }
-
-    // Search filter
     if (searchTerm) {
       filtered = filtered.filter(patient =>
         patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -111,12 +77,10 @@ export function Patients() {
       );
     }
 
-    // Status filter
     if (statusFilter !== 'all') {
       filtered = filtered.filter(patient => patient.status === statusFilter);
     }
 
-    // Procedure filter
     if (procedureFilter !== 'all') {
       if (procedureFilter === 'has-procedure') {
         filtered = filtered.filter(patient => patient.procedure);
@@ -128,7 +92,7 @@ export function Patients() {
     }
 
     setFilteredPatients(filtered);
-  }, [patients, searchTerm, statusFilter, procedureFilter, weekFilter]);
+  }, [patients, searchTerm, statusFilter, procedureFilter]);
 
   const handleDeletePatient = async (id: string) => {
     try {
@@ -221,8 +185,6 @@ export function Patients() {
     });
   };
 
-  const weeklyData = getWeeklyData();
-
   if (loading) {
     return (
       <div className="w-full p-4 sm:p-6 lg:p-8 bg-white min-h-screen">
@@ -239,8 +201,8 @@ export function Patients() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Patients</h1>
-          <p className="text-gray-600">Manage patient records and procedure status</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">My Patients</h1>
+          <p className="text-gray-600">Patients you have created and are managing</p>
         </div>
         <Link to="/patients/new">
           <Button className="w-full sm:w-auto">
@@ -249,6 +211,36 @@ export function Patients() {
           </Button>
         </Link>
       </div>
+
+      {/* Stats Card */}
+      <Card className="mb-6 bg-white border border-gray-200">
+        <CardContent className="p-6 bg-white">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-blue-600">{patients.length}</p>
+              <p className="text-sm text-gray-600">Total Patients</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-green-600">
+                {patients.filter(p => p.status === 'active').length}
+              </p>
+              <p className="text-sm text-gray-600">Active</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-purple-600">
+                {patients.filter(p => p.status === 'done').length}
+              </p>
+              <p className="text-sm text-gray-600">Done</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-yellow-600">
+                {patients.filter(p => p.procedure && p.procedureStatus === 'pending').length}
+              </p>
+              <p className="text-sm text-gray-600">Pending Procedures</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Color Legend */}
       <Card className="mb-6 bg-white border border-gray-200">
@@ -292,21 +284,6 @@ export function Patients() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 bg-white border-gray-300"
               />
-            </div>
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-gray-500" />
-              <select
-                value={weekFilter}
-                onChange={(e) => setWeekFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[150px] bg-white"
-              >
-                <option value="all">All Weeks</option>
-                {weeklyData.map((week, index) => (
-                  <option key={index} value={index.toString()}>
-                    Week of {week.week}
-                  </option>
-                ))}
-              </select>
             </div>
             <select
               value={statusFilter}
@@ -352,7 +329,6 @@ export function Patients() {
               <TableBody className="bg-white">
                 {filteredPatients.map((patient) => {
                   const ProcedureIcon = getProcedureStatusIcon(patient.procedureStatus);
-                  const canDelete = userProfile?.role === 'consultant' || userProfile?.role === 'doctor';
                   
                   return (
                     <TableRow 
@@ -369,9 +345,9 @@ export function Patients() {
                             <Badge variant={getStatusColor(patient.status)} className="text-xs">
                               {patient.status}
                             </Badge>
-                            {patient.doctorName && (
-                              <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                                Dr. {patient.doctorName}
+                            {patient.consultantName && (
+                              <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                                Consultant: {patient.consultantName}
                               </span>
                             )}
                           </div>
@@ -386,6 +362,7 @@ export function Patients() {
                           {patient.wardId && (
                             <p className="text-xs text-gray-500 truncate">
                               {getWardName(patient.wardId)}
+                              {patient.bedNumber && ` - Bed ${patient.bedNumber}`}
                             </p>
                           )}
                         </div>
@@ -420,29 +397,27 @@ export function Patients() {
                               <Edit className="h-4 w-4" />
                             </Button>
                           </Link>
-                          {canDelete && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="sm" title="Delete Patient">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent className="bg-white">
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle className="text-gray-900">Are you sure?</AlertDialogTitle>
-                                  <AlertDialogDescription className="text-gray-600">
-                                    This action cannot be undone. This will permanently delete the patient record for {patient.name}.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel className="bg-white text-gray-900 border-gray-300">Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDeletePatient(patient.id)}>
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          )}
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" title="Delete Patient">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="bg-white">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle className="text-gray-900">Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription className="text-gray-600">
+                                  This action cannot be undone. This will permanently delete the patient record for {patient.name}.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel className="bg-white text-gray-900 border-gray-300">Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeletePatient(patient.id)}>
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -453,6 +428,7 @@ export function Patients() {
           </div>
           {filteredPatients.length === 0 && (
             <div className="text-center py-12 bg-white">
+              <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">No patients found matching your criteria.</p>
               <Link to="/patients/new" className="inline-block mt-4">
                 <Button>

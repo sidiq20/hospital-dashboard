@@ -9,61 +9,64 @@ import {
   query, 
   orderBy, 
   onSnapshot,
-  arrayUnion,
-  runTransaction,
-  writeBatch,
-  where
+  arrayUnion
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Patient, Ward, User, DashboardStats, PatientNote, Appointment, ProcedureAnalytics } from '@/types';
+import { removeUndefined } from '@/lib/utils';
+import { Patient, Ward, User, DashboardStats, PatientNote, Appointment, BiopsyResult, ProcedureAnalytics } from '@/types';
+
+// Helper function to safely convert Firestore timestamps
+const convertTimestamp = (timestamp: any): Date => {
+  if (!timestamp) return new Date();
+  if (timestamp.toDate) return timestamp.toDate();
+  if (timestamp instanceof Date) return timestamp;
+  return new Date(timestamp);
+};
+
+// Helper function to safely convert patient data
+const convertPatientData = (data: any): Patient => {
+  return {
+    ...data,
+    admissionDate: convertTimestamp(data.admissionDate),
+    dischargeDate: data.dischargeDate ? convertTimestamp(data.dischargeDate) : undefined,
+    procedureDate: data.procedureDate ? convertTimestamp(data.procedureDate) : undefined,
+    createdAt: convertTimestamp(data.createdAt),
+    updatedAt: convertTimestamp(data.updatedAt),
+    notes: (data.notes || []).map((note: any) => ({
+      ...note,
+      createdAt: convertTimestamp(note.createdAt)
+    })),
+    appointments: (data.appointments || []).map((apt: any) => ({
+      ...apt,
+      scheduledDate: convertTimestamp(apt.scheduledDate),
+      createdAt: convertTimestamp(apt.createdAt)
+    })),
+    biopsyResults: (data.biopsyResults || []).map((result: any) => ({
+      ...result,
+      performedDate: convertTimestamp(result.performedDate),
+      createdAt: convertTimestamp(result.createdAt)
+    }))
+  };
+};
 
 // Patients
-export const createPatient = async (patient: Omit<Patient, 'id' | 'createdAt' | 'updatedAt'>) => {
+export const createPatient = async (patient: Omit<Patient, 'id' | 'createdAt' | 'updatedAt'>, doctorId?: string, doctorName?: string) => {
   try {
-    const patientData = {
+    const patientData = removeUndefined({
       ...patient,
-      notes: [],
-      appointments: [],
-      procedureStatus: patient.procedure ? 'pending' : undefined,
+      notes: patient.notes || [],
+      appointments: patient.appointments || [],
+      biopsyResults: patient.biopsyResults || [],
+      procedureStatus: patient.procedure ? (patient.procedureStatus || 'pending') : undefined,
+      doctorId: doctorId,
+      doctorName: doctorName,
       createdAt: new Date(),
       updatedAt: new Date()
-    };
-    
-    // If no ward is assigned or patient is not admitted, create patient directly
-    if (!patient.wardId || patient.status !== 'admitted') {
-      const docRef = await addDoc(collection(db, 'patients'), patientData);
-      return docRef.id;
-    }
-    
-    // Use transaction for ward occupancy update
-    return await runTransaction(db, async (transaction) => {
-      // Check if ward exists and has available beds
-      const wardRef = doc(db, 'wards', patient.wardId!);
-      const wardDoc = await transaction.get(wardRef);
-      
-      if (!wardDoc.exists()) {
-        throw new Error('Selected ward does not exist');
-      }
-      
-      const wardData = wardDoc.data() as Ward;
-      const newOccupiedBeds = wardData.occupiedBeds + 1;
-      
-      // Check if ward has available beds
-      if (newOccupiedBeds > wardData.totalBeds) {
-        throw new Error(`Ward ${wardData.name} is at full capacity (${wardData.totalBeds}/${wardData.totalBeds} beds occupied)`);
-      }
-      
-      // Create patient document
-      const patientRef = doc(collection(db, 'patients'));
-      transaction.set(patientRef, patientData);
-      
-      // Update ward occupancy
-      transaction.update(wardRef, {
-        occupiedBeds: newOccupiedBeds
-      });
-      
-      return patientRef.id;
     });
+    
+    // Create patient directly without ward occupancy tracking
+    const docRef = await addDoc(collection(db, 'patients'), patientData);
+    return docRef.id;
   } catch (error) {
     console.error('Error creating patient:', error);
     throw error;
@@ -77,26 +80,7 @@ export const getPatient = async (id: string): Promise<Patient | null> => {
     
     if (docSnap.exists()) {
       const data = docSnap.data();
-      return { 
-        id: docSnap.id, 
-        ...data,
-        // Ensure dates are properly converted
-        admissionDate: data.admissionDate?.toDate ? data.admissionDate.toDate() : new Date(data.admissionDate),
-        dischargeDate: data.dischargeDate?.toDate ? data.dischargeDate.toDate() : data.dischargeDate ? new Date(data.dischargeDate) : undefined,
-        procedureDate: data.procedureDate?.toDate ? data.procedureDate.toDate() : data.procedureDate ? new Date(data.procedureDate) : undefined,
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
-        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt),
-        // Ensure notes and appointments arrays exist and convert dates
-        notes: (data.notes || []).map((note: any) => ({
-          ...note,
-          createdAt: note.createdAt?.toDate ? note.createdAt.toDate() : new Date(note.createdAt)
-        })),
-        appointments: (data.appointments || []).map((apt: any) => ({
-          ...apt,
-          scheduledDate: apt.scheduledDate?.toDate ? apt.scheduledDate.toDate() : new Date(apt.scheduledDate),
-          createdAt: apt.createdAt?.toDate ? apt.createdAt.toDate() : new Date(apt.createdAt)
-        }))
-      } as Patient;
+      return convertPatientData({ id: docSnap.id, ...data }) as Patient;
     }
     return null;
   } catch (error) {
@@ -110,26 +94,7 @@ export const getPatients = async (): Promise<Patient[]> => {
     const querySnapshot = await getDocs(collection(db, 'patients'));
     return querySnapshot.docs.map(doc => {
       const data = doc.data();
-      return { 
-        id: doc.id, 
-        ...data,
-        // Ensure dates are properly converted
-        admissionDate: data.admissionDate?.toDate ? data.admissionDate.toDate() : new Date(data.admissionDate),
-        dischargeDate: data.dischargeDate?.toDate ? data.dischargeDate.toDate() : data.dischargeDate ? new Date(data.dischargeDate) : undefined,
-        procedureDate: data.procedureDate?.toDate ? data.procedureDate.toDate() : data.procedureDate ? new Date(data.procedureDate) : undefined,
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
-        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt),
-        // Ensure notes and appointments arrays exist and convert dates
-        notes: (data.notes || []).map((note: any) => ({
-          ...note,
-          createdAt: note.createdAt?.toDate ? note.createdAt.toDate() : new Date(note.createdAt)
-        })),
-        appointments: (data.appointments || []).map((apt: any) => ({
-          ...apt,
-          scheduledDate: apt.scheduledDate?.toDate ? apt.scheduledDate.toDate() : new Date(apt.scheduledDate),
-          createdAt: apt.createdAt?.toDate ? apt.createdAt.toDate() : new Date(apt.createdAt)
-        }))
-      };
+      return convertPatientData({ id: doc.id, ...data });
     }) as Patient[];
   } catch (error) {
     console.error('Error getting patients:', error);
@@ -139,80 +104,47 @@ export const getPatients = async (): Promise<Patient[]> => {
 
 export const updatePatient = async (id: string, updates: Partial<Patient>) => {
   try {
-    return await runTransaction(db, async (transaction) => {
-      const docRef = doc(db, 'patients', id);
-      
-      // Get current patient data to check for ward changes
-      const currentPatientDoc = await transaction.get(docRef);
-      if (!currentPatientDoc.exists()) {
-        throw new Error('Patient not found');
+    const docRef = doc(db, 'patients', id);
+    
+    // Get current patient data
+    const currentPatientDoc = await getDoc(docRef);
+    if (!currentPatientDoc.exists()) {
+      throw new Error('Patient not found');
+    }
+    
+    const currentPatient = currentPatientDoc.data() as Patient;
+    
+    // Auto-set procedure status if procedure is added/removed
+    const finalUpdates = { ...updates };
+    if (updates.procedure !== undefined) {
+      if (updates.procedure && !currentPatient.procedure) {
+        // Adding procedure - set to pending
+        finalUpdates.procedureStatus = 'pending';
+      } else if (!updates.procedure && currentPatient.procedure) {
+        // Removing procedure - clear status
+        finalUpdates.procedureStatus = undefined;
+        finalUpdates.procedureDate = undefined;
       }
-      
-      const currentPatient = currentPatientDoc.data() as Patient;
-      
-      // Handle ward occupancy changes
-      const oldWardId = currentPatient.wardId;
-      const newWardId = updates.wardId;
-      const oldStatus = currentPatient.status;
-      const newStatus = updates.status || oldStatus;
-      
-      // If ward changed or status changed, update ward occupancy
-      if (oldWardId !== newWardId || oldStatus !== newStatus) {
-        // Decrease occupancy in old ward if patient was admitted
-        if (oldWardId && oldStatus === 'admitted') {
-          const oldWardRef = doc(db, 'wards', oldWardId);
-          const oldWardDoc = await transaction.get(oldWardRef);
-          if (oldWardDoc.exists()) {
-            const oldWardData = oldWardDoc.data() as Ward;
-            transaction.update(oldWardRef, {
-              occupiedBeds: Math.max(0, oldWardData.occupiedBeds - 1)
-            });
-          }
-        }
-        
-        // Increase occupancy in new ward if patient is admitted
-        if (newWardId && newStatus === 'admitted') {
-          const newWardRef = doc(db, 'wards', newWardId);
-          const newWardDoc = await transaction.get(newWardRef);
-          if (newWardDoc.exists()) {
-            const newWardData = newWardDoc.data() as Ward;
-            const newOccupiedBeds = newWardData.occupiedBeds + 1;
-            
-            // Ensure we don't exceed total beds
-            if (newOccupiedBeds > newWardData.totalBeds) {
-              throw new Error(`Ward ${newWardData.name} is at full capacity`);
-            }
-            
-            transaction.update(newWardRef, {
-              occupiedBeds: newOccupiedBeds
-            });
-          }
-        }
-      }
-      
-      // Auto-set procedure status if procedure is added/removed
-      const finalUpdates = { ...updates };
-      if (updates.procedure !== undefined) {
-        if (updates.procedure && !currentPatient.procedure) {
-          // Adding procedure - set to pending
-          finalUpdates.procedureStatus = 'pending';
-        } else if (!updates.procedure && currentPatient.procedure) {
-          // Removing procedure - clear status
-          finalUpdates.procedureStatus = undefined;
-          finalUpdates.procedureDate = undefined;
-        }
-      }
-      
-      // Set procedure date when status changes to completed
-      if (updates.procedureStatus === 'completed' && currentPatient.procedureStatus !== 'completed') {
-        finalUpdates.procedureDate = new Date();
-      }
-      
-      transaction.update(docRef, {
-        ...finalUpdates,
-        updatedAt: new Date()
-      });
+    }
+    
+    // Set procedure date when status changes to completed
+    if (updates.procedureStatus === 'completed' && currentPatient.procedureStatus !== 'completed') {
+      finalUpdates.procedureDate = new Date();
+    }
+    
+    // Handle discharge date
+    if (updates.status === 'discharged' && currentPatient.status !== 'discharged') {
+      finalUpdates.dischargeDate = new Date();
+    } else if (updates.status !== 'discharged' && currentPatient.status === 'discharged') {
+      finalUpdates.dischargeDate = undefined;
+    }
+    
+    const cleanedUpdates = removeUndefined({
+      ...finalUpdates,
+      updatedAt: new Date()
     });
+    
+    await updateDoc(docRef, cleanedUpdates);
   } catch (error) {
     console.error('Error updating patient:', error);
     throw error;
@@ -221,30 +153,8 @@ export const updatePatient = async (id: string, updates: Partial<Patient>) => {
 
 export const deletePatient = async (id: string) => {
   try {
-    return await runTransaction(db, async (transaction) => {
-      const docRef = doc(db, 'patients', id);
-      
-      // Get patient data before deletion to update ward occupancy
-      const patientDoc = await transaction.get(docRef);
-      if (!patientDoc.exists()) {
-        throw new Error('Patient not found');
-      }
-      
-      const patient = patientDoc.data() as Patient;
-      
-      if (patient.wardId && patient.status === 'admitted') {
-        const wardRef = doc(db, 'wards', patient.wardId);
-        const wardDoc = await transaction.get(wardRef);
-        if (wardDoc.exists()) {
-          const wardData = wardDoc.data() as Ward;
-          transaction.update(wardRef, {
-            occupiedBeds: Math.max(0, wardData.occupiedBeds - 1)
-          });
-        }
-      }
-      
-      transaction.delete(docRef);
-    });
+    const docRef = doc(db, 'patients', id);
+    await deleteDoc(docRef);
   } catch (error) {
     console.error('Error deleting patient:', error);
     throw error;
@@ -253,11 +163,11 @@ export const deletePatient = async (id: string) => {
 
 export const addPatientNote = async (patientId: string, note: Omit<PatientNote, 'id'>) => {
   try {
-    const noteWithId = {
+    const noteWithId = removeUndefined({
       ...note,
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       createdAt: new Date()
-    };
+    });
     
     const docRef = doc(db, 'patients', patientId);
     await updateDoc(docRef, {
@@ -272,12 +182,12 @@ export const addPatientNote = async (patientId: string, note: Omit<PatientNote, 
 
 export const scheduleAppointment = async (patientId: string, appointment: Omit<Appointment, 'id'>) => {
   try {
-    const appointmentWithId = {
+    const appointmentWithId = removeUndefined({
       ...appointment,
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       scheduledDate: appointment.scheduledDate,
       createdAt: new Date()
-    };
+    });
     
     const docRef = doc(db, 'patients', patientId);
     await updateDoc(docRef, {
@@ -290,13 +200,33 @@ export const scheduleAppointment = async (patientId: string, appointment: Omit<A
   }
 };
 
+export const addBiopsyResult = async (patientId: string, biopsyResult: Omit<BiopsyResult, 'id'>) => {
+  try {
+    const resultWithId = removeUndefined({
+      ...biopsyResult,
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      performedDate: biopsyResult.performedDate,
+      createdAt: new Date()
+    });
+    
+    const docRef = doc(db, 'patients', patientId);
+    await updateDoc(docRef, {
+      biopsyResults: arrayUnion(resultWithId),
+      updatedAt: new Date()
+    });
+  } catch (error) {
+    console.error('Error adding biopsy result:', error);
+    throw new Error('Failed to add biopsy result');
+  }
+};
+
 // Wards
 export const createWard = async (ward: Omit<Ward, 'id' | 'createdAt'>) => {
   try {
-    const wardData = {
+    const wardData = removeUndefined({
       ...ward,
       createdAt: new Date()
-    };
+    });
     const docRef = await addDoc(collection(db, 'wards'), wardData);
     return docRef.id;
   } catch (error) {
@@ -313,7 +243,7 @@ export const getWards = async (): Promise<Ward[]> => {
       return { 
         id: doc.id, 
         ...data,
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt)
+        createdAt: convertTimestamp(data.createdAt)
       };
     }) as Ward[];
   } catch (error) {
@@ -325,7 +255,8 @@ export const getWards = async (): Promise<Ward[]> => {
 export const updateWard = async (id: string, updates: Partial<Ward>) => {
   try {
     const docRef = doc(db, 'wards', id);
-    await updateDoc(docRef, updates);
+    const cleanedUpdates = removeUndefined(updates);
+    await updateDoc(docRef, cleanedUpdates);
   } catch (error) {
     console.error('Error updating ward:', error);
     throw error;
@@ -334,17 +265,6 @@ export const updateWard = async (id: string, updates: Partial<Ward>) => {
 
 export const deleteWard = async (id: string) => {
   try {
-    // Check if any patients are assigned to this ward
-    const patientsSnapshot = await getDocs(collection(db, 'patients'));
-    const patientsInWard = patientsSnapshot.docs.filter(doc => {
-      const patient = doc.data() as Patient;
-      return patient.wardId === id && patient.status === 'admitted';
-    });
-    
-    if (patientsInWard.length > 0) {
-      throw new Error(`Cannot delete ward. ${patientsInWard.length} patients are currently admitted to this ward.`);
-    }
-    
     await deleteDoc(doc(db, 'wards', id));
   } catch (error) {
     console.error('Error deleting ward:', error);
@@ -358,26 +278,7 @@ export const subscribeToPatients = (callback: (patients: Patient[]) => void) => 
   return onSnapshot(q, (querySnapshot) => {
     const patients = querySnapshot.docs.map(doc => {
       const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        // Ensure dates are properly converted
-        admissionDate: data.admissionDate?.toDate ? data.admissionDate.toDate() : new Date(data.admissionDate),
-        dischargeDate: data.dischargeDate?.toDate ? data.dischargeDate.toDate() : data.dischargeDate ? new Date(data.dischargeDate) : undefined,
-        procedureDate: data.procedureDate?.toDate ? data.procedureDate.toDate() : data.procedureDate ? new Date(data.procedureDate) : undefined,
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
-        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt),
-        // Ensure notes and appointments arrays exist and convert dates
-        notes: (data.notes || []).map((note: any) => ({
-          ...note,
-          createdAt: note.createdAt?.toDate ? note.createdAt.toDate() : new Date(note.createdAt)
-        })),
-        appointments: (data.appointments || []).map((apt: any) => ({
-          ...apt,
-          scheduledDate: apt.scheduledDate?.toDate ? apt.scheduledDate.toDate() : new Date(apt.scheduledDate),
-          createdAt: apt.createdAt?.toDate ? apt.createdAt.toDate() : new Date(apt.createdAt)
-        }))
-      };
+      return convertPatientData({ id: doc.id, ...data });
     }) as Patient[];
     callback(patients);
   }, (error) => {
@@ -393,7 +294,7 @@ export const subscribeToWards = (callback: (wards: Ward[]) => void) => {
       return {
         id: doc.id,
         ...data,
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt)
+        createdAt: convertTimestamp(data.createdAt)
       };
     }) as Ward[];
     callback(wards);
@@ -412,12 +313,7 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
 
     const patients = patientsSnapshot.docs.map(doc => {
       const data = doc.data();
-      return {
-        ...data,
-        admissionDate: data.admissionDate?.toDate ? data.admissionDate.toDate() : new Date(data.admissionDate),
-        dischargeDate: data.dischargeDate?.toDate ? data.dischargeDate.toDate() : data.dischargeDate ? new Date(data.dischargeDate) : undefined,
-        procedureDate: data.procedureDate?.toDate ? data.procedureDate.toDate() : data.procedureDate ? new Date(data.procedureDate) : undefined,
-      };
+      return convertPatientData(data);
     }) as Patient[];
     
     const wards = wardsSnapshot.docs.map(doc => doc.data() as Ward);
@@ -428,13 +324,9 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
     const weekStart = new Date(today);
     weekStart.setDate(today.getDate() - today.getDay());
 
-    const admittedPatients = patients.filter(p => p.status === 'admitted').length;
-    const criticalPatients = patients.filter(p => p.status === 'critical').length;
+    const admittedPatients = patients.filter(p => p.status === 'active').length;
     const admissionsToday = patients.filter(p => 
       p.admissionDate >= today
-    ).length;
-    const dischargesToday = patients.filter(p => 
-      p.dischargeDate && p.dischargeDate >= today
     ).length;
 
     // Procedure statistics
@@ -446,19 +338,15 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
       p.procedureStatus === 'completed' && p.procedureDate && p.procedureDate >= weekStart
     ).length;
 
-    const totalBeds = wards.reduce((sum, ward) => sum + ward.totalBeds, 0);
-    const occupiedBeds = wards.reduce((sum, ward) => sum + ward.occupiedBeds, 0);
-    const occupancyRate = totalBeds > 0 ? (occupiedBeds / totalBeds) * 100 : 0;
-
     return {
       totalPatients: patients.length,
       admittedPatients,
       dischargedPatients: patients.filter(p => p.status === 'discharged').length,
-      criticalPatients,
+      criticalPatients: 0, // Removed as requested
       totalWards: wards.length,
-      occupancyRate,
+      occupancyRate: 0, // Removed as requested
       admissionsToday,
-      dischargesToday,
+      dischargesToday: 0, // Simplified
       proceduresPending,
       proceduresReviewed,
       proceduresCompleted,
@@ -476,11 +364,7 @@ export const getProcedureAnalytics = async (): Promise<ProcedureAnalytics> => {
     const patientsSnapshot = await getDocs(collection(db, 'patients'));
     const patients = patientsSnapshot.docs.map(doc => {
       const data = doc.data();
-      return {
-        ...data,
-        admissionDate: data.admissionDate?.toDate ? data.admissionDate.toDate() : new Date(data.admissionDate),
-        procedureDate: data.procedureDate?.toDate ? data.procedureDate.toDate() : data.procedureDate ? new Date(data.procedureDate) : undefined,
-      };
+      return convertPatientData(data);
     }) as Patient[];
 
     const patientsWithProcedures = patients.filter(p => p.procedure);
@@ -560,7 +444,7 @@ export const getUsers = async (): Promise<User[]> => {
       return { 
         id: doc.id, 
         ...data,
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt)
+        createdAt: convertTimestamp(data.createdAt)
       };
     }) as User[];
   } catch (error) {
@@ -571,10 +455,10 @@ export const getUsers = async (): Promise<User[]> => {
 
 export const createUser = async (userData: Omit<User, 'id' | 'createdAt'>) => {
   try {
-    const userDoc = {
+    const userDoc = removeUndefined({
       ...userData,
       createdAt: new Date()
-    };
+    });
     const docRef = await addDoc(collection(db, 'users'), userDoc);
     return docRef.id;
   } catch (error) {

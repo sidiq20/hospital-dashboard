@@ -4,19 +4,19 @@ import { getFirestore } from "firebase/firestore";
 import { getAnalytics } from "firebase/analytics";
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+  apiKey: "AIzaSyCR2tmPmf7A4sSLsbNUyuJwiv8EjOOjXNc",
+  authDomain: "hospital-dashboard-da852.firebaseapp.com",
+  projectId: "hospital-dashboard-da852",
+  storageBucket: "hospital-dashboard-da852.firebasestorage.app",
+  messagingSenderId: "16484343426",
+  appId: "1:16484343426:web:a5d9c8d0e7a820e06e5e9b",
+  measurementId: "G-SYTW00Z6VP"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Firebase services
+// Initialize Firebase services
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const analytics = getAnalytics(app);

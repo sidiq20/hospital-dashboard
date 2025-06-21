@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       id: user.uid,
       email: user.email!,
       name: userData.name || '',
-      role: userData.role || 'reception',
+      role: userData.role || 'doctor',
       phone: userData.phone,
       department: userData.department,
       createdAt: new Date()

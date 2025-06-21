@@ -14,8 +14,6 @@ import { toast } from 'sonner';
 const wardSchema = z.object({
   name: z.string().min(2, 'Ward name must be at least 2 characters'),
   department: z.string().min(2, 'Department must be at least 2 characters'),
-  totalBeds: z.number().min(1, 'Must have at least 1 bed'),
-  occupiedBeds: z.number().min(0, 'Occupied beds cannot be negative'),
   wardType: z.enum(['general', 'icu', 'emergency', 'surgery', 'maternity', 'pediatric']),
 });
 
@@ -29,24 +27,14 @@ export function AddWard() {
     register,
     handleSubmit,
     formState: { errors },
-    watch,
   } = useForm<WardFormData>({
     resolver: zodResolver(wardSchema),
     defaultValues: {
       wardType: 'general',
-      occupiedBeds: 0,
     },
   });
 
-  const totalBeds = watch('totalBeds');
-  const occupiedBeds = watch('occupiedBeds');
-
   const onSubmit = async (data: WardFormData) => {
-    if (data.occupiedBeds > data.totalBeds) {
-      toast.error('Occupied beds cannot exceed total beds');
-      return;
-    }
-
     setLoading(true);
     
     try {
@@ -106,7 +94,7 @@ export function AddWard() {
                 )}
               </div>
 
-              <div>
+              <div className="md:col-span-2">
                 <Label htmlFor="wardType">Ward Type *</Label>
                 <select
                   id="wardType"
@@ -121,58 +109,7 @@ export function AddWard() {
                   <option value="pediatric">Pediatric</option>
                 </select>
               </div>
-
-              <div>
-                <Label htmlFor="totalBeds">Total Beds *</Label>
-                <Input
-                  id="totalBeds"
-                  type="number"
-                  {...register('totalBeds', { valueAsNumber: true })}
-                  placeholder="Enter total number of beds"
-                />
-                {errors.totalBeds && (
-                  <p className="text-sm text-red-600 mt-1">{errors.totalBeds.message}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="occupiedBeds">Currently Occupied Beds</Label>
-                <Input
-                  id="occupiedBeds"
-                  type="number"
-                  {...register('occupiedBeds', { valueAsNumber: true })}
-                  placeholder="Enter occupied beds"
-                />
-                {errors.occupiedBeds && (
-                  <p className="text-sm text-red-600 mt-1">{errors.occupiedBeds.message}</p>
-                )}
-                {totalBeds && occupiedBeds > totalBeds && (
-                  <p className="text-sm text-red-600 mt-1">
-                    Occupied beds cannot exceed total beds
-                  </p>
-                )}
-              </div>
             </div>
-
-            {totalBeds && (
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2">Ward Summary</h4>
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-600">Total Beds</p>
-                    <p className="font-semibold">{totalBeds}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Occupied</p>
-                    <p className="font-semibold">{occupiedBeds || 0}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Available</p>
-                    <p className="font-semibold">{totalBeds - (occupiedBeds || 0)}</p>
-                  </div>
-                </div>
-              </div>
-            )}
 
             <div className="flex flex-col sm:flex-row gap-4">
               <Button type="submit" disabled={loading} className="flex items-center gap-2">

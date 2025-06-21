@@ -8,27 +8,28 @@ import {
   MapPin, 
   Calendar,
   User,
-  Heart,
   Stethoscope,
   Bed,
   Clock,
   AlertCircle,
   FileText,
-  MessageSquare,
   CheckCircle,
-  Activity
+  Activity,
+  UserCheck,
+  UserPlus
 } from 'lucide-react';
-import { Patient, PatientNote, Appointment, Ward } from '@/types';
-import { getPatient, addPatientNote, scheduleAppointment, getWards, updatePatient } from '@/services/database';
+import { Patient, PatientNote, Appointment, BiopsyResult, Ward, User as UserType } from '@/types';
+import { getPatient, addPatientNote, scheduleAppointment, addBiopsyResult, getWards, updatePatient, getUsers } from '@/services/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { PatientNoteDialog } from '@/components/patients/PatientNoteDialog';
+import { AppointmentDialog } from '@/components/patients/AppointmentDialog';
+import { BiopsyResultDialog } from '@/components/patients/BiopsyResultDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
 export function PatientDetails() {
@@ -37,31 +38,29 @@ export function PatientDetails() {
   const { userProfile } = useAuth();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [wards, setWards] = useState<Ward[]>([]);
+  const [consultants, setConsultants] = useState<UserType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [noteContent, setNoteContent] = useState('');
-  const [noteType, setNoteType] = useState<'general' | 'medical' | 'nursing' | 'administrative'>('general');
   const [addingNote, setAddingNote] = useState(false);
-  const [appointmentData, setAppointmentData] = useState({
-    title: '',
-    description: '',
-    scheduledDate: '',
-    duration: 30,
-    type: 'consultation' as 'consultation' | 'procedure' | 'follow-up' | 'surgery' | 'therapy'
-  });
   const [schedulingAppointment, setSchedulingAppointment] = useState(false);
+  const [addingBiopsyResult, setAddingBiopsyResult] = useState(false);
   const [updatingProcedure, setUpdatingProcedure] = useState(false);
+  const [markingDone, setMarkingDone] = useState(false);
+  const [markDoneDialogOpen, setMarkDoneDialogOpen] = useState(false);
+  const [selectedConsultant, setSelectedConsultant] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
       if (!id) return;
       
       try {
-        const [patientData, wardsData] = await Promise.all([
+        const [patientData, wardsData, usersData] = await Promise.all([
           getPatient(id),
-          getWards()
+          getWards(),
+          getUsers()
         ]);
         setPatient(patientData);
         setWards(wardsData);
+        setConsultants(usersData.filter(user => user.role === 'consultant'));
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -72,17 +71,16 @@ export function PatientDetails() {
     loadData();
   }, [id]);
 
-  const handleAddNote = async () => {
-    if (!noteContent.trim() || !patient || !userProfile) return;
+  const handleAddNote = async (noteData: Omit<PatientNote, 'id' | 'createdBy' | 'createdByName' | 'createdAt'>) => {
+    if (!patient || !userProfile) return;
 
     setAddingNote(true);
     try {
       const note: Omit<PatientNote, 'id'> = {
-        content: noteContent.trim(),
+        ...noteData,
         createdBy: userProfile.id,
         createdByName: userProfile.name,
-        createdAt: new Date(),
-        type: noteType
+        createdAt: new Date()
       };
 
       await addPatientNote(patient.id, note);
@@ -91,30 +89,25 @@ export function PatientDetails() {
       const updatedPatient = await getPatient(patient.id);
       setPatient(updatedPatient);
       
-      setNoteContent('');
       toast.success('Note added successfully');
     } catch (error) {
       toast.error('Failed to add note');
+      throw error;
     } finally {
       setAddingNote(false);
     }
   };
 
-  const handleScheduleAppointment = async () => {
-    if (!appointmentData.title.trim() || !appointmentData.scheduledDate || !patient || !userProfile) return;
+  const handleScheduleAppointment = async (appointmentData: Omit<Appointment, 'id' | 'patientId' | 'doctorId' | 'doctorName' | 'createdBy' | 'createdAt'>) => {
+    if (!patient || !userProfile) return;
 
     setSchedulingAppointment(true);
     try {
       const appointment: Omit<Appointment, 'id'> = {
+        ...appointmentData,
         patientId: patient.id,
         doctorId: userProfile.id,
         doctorName: userProfile.name,
-        title: appointmentData.title.trim(),
-        description: appointmentData.description.trim() || undefined,
-        scheduledDate: new Date(appointmentData.scheduledDate),
-        duration: appointmentData.duration,
-        status: 'scheduled',
-        type: appointmentData.type,
         createdBy: userProfile.id,
         createdAt: new Date()
       };
@@ -125,18 +118,40 @@ export function PatientDetails() {
       const updatedPatient = await getPatient(patient.id);
       setPatient(updatedPatient);
       
-      setAppointmentData({
-        title: '',
-        description: '',
-        scheduledDate: '',
-        duration: 30,
-        type: 'consultation'
-      });
       toast.success('Appointment scheduled successfully');
     } catch (error) {
       toast.error('Failed to schedule appointment');
+      throw error;
     } finally {
       setSchedulingAppointment(false);
+    }
+  };
+
+  const handleAddBiopsyResult = async (resultData: Omit<BiopsyResult, 'id' | 'performedBy' | 'performedByName' | 'performedDate' | 'createdAt'>) => {
+    if (!patient || !userProfile) return;
+
+    setAddingBiopsyResult(true);
+    try {
+      const biopsyResult: Omit<BiopsyResult, 'id'> = {
+        ...resultData,
+        performedBy: userProfile.id,
+        performedByName: userProfile.name,
+        performedDate: new Date(),
+        createdAt: new Date()
+      };
+
+      await addBiopsyResult(patient.id, biopsyResult);
+      
+      // Refresh patient data
+      const updatedPatient = await getPatient(patient.id);
+      setPatient(updatedPatient);
+      
+      toast.success('Biopsy result added successfully');
+    } catch (error) {
+      toast.error('Failed to add biopsy result');
+      throw error;
+    } finally {
+      setAddingBiopsyResult(false);
     }
   };
 
@@ -159,15 +174,57 @@ export function PatientDetails() {
     }
   };
 
+  const handleMarkAsDone = async () => {
+    if (!patient || !userProfile) return;
+
+    setMarkingDone(true);
+    try {
+      let updates: any = { 
+        status: 'done'
+      };
+
+      if (userProfile.role === 'doctor') {
+        // Doctor marking as done - must select a consultant
+        if (!selectedConsultant) {
+          throw new Error('Please select a consultant');
+        }
+        const consultant = consultants.find(c => c.id === selectedConsultant);
+        if (!consultant) {
+          throw new Error('Selected consultant not found');
+        }
+        updates.consultantId = consultant.id;
+        updates.consultantName = consultant.name;
+      } else if (userProfile.role === 'consultant') {
+        // Consultant marking as done - assign themselves
+        updates.consultantId = userProfile.id;
+        updates.consultantName = userProfile.name;
+      }
+
+      await updatePatient(patient.id, updates);
+      
+      // Refresh patient data
+      const updatedPatient = await getPatient(patient.id);
+      setPatient(updatedPatient);
+      
+      setMarkDoneDialogOpen(false);
+      setSelectedConsultant('');
+      
+      if (userProfile.role === 'doctor') {
+        toast.success(`Patient marked as done and assigned to ${updates.consultantName}`);
+      } else {
+        toast.success('Patient marked as done');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to mark patient as done');
+    } finally {
+      setMarkingDone(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'admitted': return 'default';
+      case 'active': return 'default';
       case 'discharged': return 'secondary';
-      case 'critical': return 'destructive';
-      case 'stable': return 'secondary';
-      case 'in-treatment': return 'default';
-      case 'review': return 'outline';
-      case 'procedure': return 'default';
       case 'done': return 'secondary';
       default: return 'outline';
     }
@@ -175,10 +232,7 @@ export function PatientDetails() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'critical': return AlertCircle;
-      case 'stable': return Heart;
-      case 'in-treatment': return Stethoscope;
-      case 'procedure': return Stethoscope;
+      case 'done': return CheckCircle;
       default: return User;
     }
   };
@@ -222,7 +276,7 @@ export function PatientDetails() {
 
   const getWardName = (wardId: string) => {
     const ward = wards.find(w => w.id === wardId);
-    return ward ? `${ward.name} - ${ward.department}` : wardId;
+    return ward ? ward.name : wardId;
   };
 
   const formatDate = (date: Date) => {
@@ -294,133 +348,80 @@ export function PatientDetails() {
               <span className="text-sm text-gray-500">
                 Patient ID: {patient.id.slice(-8).toUpperCase()}
               </span>
+              {patient.consultantName && (
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <UserCheck className="h-3 w-3" />
+                  Consultant: {patient.consultantName}
+                </Badge>
+              )}
             </div>
           </div>
           
           <div className="flex flex-wrap gap-2">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" />
-                  Add Note
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add Patient Note</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="noteType">Note Type</Label>
-                    <select
-                      id="noteType"
-                      value={noteType}
-                      onChange={(e) => setNoteType(e.target.value as any)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="general">General</option>
-                      <option value="medical">Medical</option>
-                      <option value="nursing">Nursing</option>
-                      <option value="administrative">Administrative</option>
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="noteContent">Note Content</Label>
-                    <Textarea
-                      id="noteContent"
-                      value={noteContent}
-                      onChange={(e) => setNoteContent(e.target.value)}
-                      placeholder="Enter your note here..."
-                      rows={4}
-                    />
-                  </div>
-                  <Button 
-                    onClick={handleAddNote} 
-                    disabled={addingNote || !noteContent.trim()}
-                    className="w-full"
-                  >
-                    {addingNote ? 'Adding Note...' : 'Add Note'}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <PatientNoteDialog
+              onAddNote={handleAddNote}
+              loading={addingNote}
+            />
 
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Schedule Appointment
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Schedule Appointment</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="appointmentTitle">Title</Label>
-                    <Input
-                      id="appointmentTitle"
-                      value={appointmentData.title}
-                      onChange={(e) => setAppointmentData(prev => ({ ...prev, title: e.target.value }))}
-                      placeholder="e.g., Follow-up consultation"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="appointmentType">Type</Label>
-                    <select
-                      id="appointmentType"
-                      value={appointmentData.type}
-                      onChange={(e) => setAppointmentData(prev => ({ ...prev, type: e.target.value as any }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="consultation">Consultation</option>
-                      <option value="procedure">Procedure</option>
-                      <option value="follow-up">Follow-up</option>
-                      <option value="surgery">Surgery</option>
-                      <option value="therapy">Therapy</option>
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="scheduledDate">Date & Time</Label>
-                    <Input
-                      id="scheduledDate"
-                      type="datetime-local"
-                      value={appointmentData.scheduledDate}
-                      onChange={(e) => setAppointmentData(prev => ({ ...prev, scheduledDate: e.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="duration">Duration (minutes)</Label>
-                    <Input
-                      id="duration"
-                      type="number"
-                      value={appointmentData.duration}
-                      onChange={(e) => setAppointmentData(prev => ({ ...prev, duration: parseInt(e.target.value) }))}
-                      min="15"
-                      step="15"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="description">Description (Optional)</Label>
-                    <Textarea
-                      id="description"
-                      value={appointmentData.description}
-                      onChange={(e) => setAppointmentData(prev => ({ ...prev, description: e.target.value }))}
-                      placeholder="Additional details about the appointment..."
-                      rows={3}
-                    />
-                  </div>
-                  <Button 
-                    onClick={handleScheduleAppointment} 
-                    disabled={schedulingAppointment || !appointmentData.title.trim() || !appointmentData.scheduledDate}
-                    className="w-full"
-                  >
-                    {schedulingAppointment ? 'Scheduling...' : 'Schedule Appointment'}
+            <AppointmentDialog
+              onScheduleAppointment={handleScheduleAppointment}
+              loading={schedulingAppointment}
+            />
+
+            <BiopsyResultDialog
+              onAddBiopsyResult={handleAddBiopsyResult}
+              loading={addingBiopsyResult}
+            />
+
+            {patient.status !== 'done' && (
+              <Dialog open={markDoneDialogOpen} onOpenChange={setMarkDoneDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4" />
+                    Mark as Done
                   </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Mark Patient as Done</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    {userProfile?.role === 'doctor' && (
+                      <div>
+                        <Label htmlFor="consultant">Assign to Consultant</Label>
+                        <select
+                          id="consultant"
+                          value={selectedConsultant}
+                          onChange={(e) => setSelectedConsultant(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Select a consultant</option>
+                          {consultants.map((consultant) => (
+                            <option key={consultant.id} value={consultant.id}>
+                              {consultant.name} {consultant.specialization ? `- ${consultant.specialization}` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    {userProfile?.role === 'consultant' && (
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <p className="text-sm text-blue-700">
+                          This patient will be marked as done and assigned to you as the consultant.
+                        </p>
+                      </div>
+                    )}
+                    <Button 
+                      onClick={handleMarkAsDone} 
+                      disabled={markingDone || (userProfile?.role === 'doctor' && !selectedConsultant)}
+                      className="w-full"
+                    >
+                      {markingDone ? 'Marking as Done...' : 'Mark as Done'}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
 
             <Link to={`/patients/${patient.id}/edit`}>
               <Button className="flex items-center gap-2">
@@ -432,9 +433,9 @@ export function PatientDetails() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="xl:col-span-2 space-y-6">
           {/* Personal Information */}
           <Card>
             <CardHeader>
@@ -527,7 +528,7 @@ export function PatientDetails() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-medium text-gray-500">Procedure</p>
-                    {userProfile && (userProfile.role === 'doctor' || userProfile.role === 'admin') && (
+                    {userProfile && userProfile.role === 'doctor' && (
                       <div className="flex gap-1">
                         <Button
                           size="sm"
@@ -593,37 +594,50 @@ export function PatientDetails() {
                   </div>
                 )}
               </div>
+
+              {/* Doctor who created the patient */}
+              {patient.doctorName && (
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <p className="text-sm font-medium text-blue-700 mb-1 flex items-center gap-2">
+                    <UserPlus className="h-4 w-4" />
+                    Added by Doctor
+                  </p>
+                  <p className="text-blue-900 font-semibold">{patient.doctorName}</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
           {/* Emergency Contact */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5" />
-                Emergency Contact
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Name</p>
-                  <p className="text-gray-900 font-semibold">{patient.emergencyContact.name}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Phone</p>
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-gray-400" />
-                    <p className="text-gray-900 font-semibold">{patient.emergencyContact.phone}</p>
+          {patient.emergencyContact && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5" />
+                  Emergency Contact
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Name</p>
+                    <p className="text-gray-900 font-semibold">{patient.emergencyContact.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Phone</p>
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-gray-400" />
+                      <p className="text-gray-900 font-semibold">{patient.emergencyContact.phone}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Relationship</p>
+                    <p className="text-gray-900 font-semibold">{patient.emergencyContact.relationship}</p>
                   </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Relationship</p>
-                  <p className="text-gray-900 font-semibold">{patient.emergencyContact.relationship}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Sidebar */}
@@ -670,8 +684,53 @@ export function PatientDetails() {
                   </div>
                 </div>
               )}
+
+              {patient.status === 'done' && patient.consultantName && (
+                <div className="flex items-start gap-3">
+                  <div className="h-2 w-2 rounded-full bg-green-600 mt-2 flex-shrink-0"></div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Marked as Done</p>
+                    <p className="text-xs text-gray-500">
+                      Assigned to {patient.consultantName}
+                    </p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
+
+          {/* Biopsy Results */}
+          {patient.biopsyResults && patient.biopsyResults.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Biopsy Results
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {patient.biopsyResults.slice(0, 3).map((result) => (
+                    <div key={result.id} className="bg-gray-50 p-3 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-medium text-gray-900">{result.title}</p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(result.performedDate).toLocaleDateString()}
+                        </p>
+                      </div>
+                      {result.description && (
+                        <p className="text-sm text-gray-600 mb-2">{result.description}</p>
+                      )}
+                      <p className="text-sm text-gray-900 bg-white p-2 rounded border">
+                        {result.result}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-2">by {result.performedByName}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Appointments */}
           {patient.appointments && patient.appointments.length > 0 && (
