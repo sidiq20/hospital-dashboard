@@ -122,15 +122,15 @@ export function Consultants() {
       const docRef = doc(db, 'users', editingConsultant.id);
       await updateDoc(docRef, {
         name: formData.name,
-        phone: formData.phone || undefined,
-        department: formData.department || undefined,
-        specialization: formData.specialization || undefined
+        phone: formData.phone,
+        department: formData.department,
+        specialization: formData.specialization
       });
 
       // Update local state
       setConsultants(prev => prev.map(consultant => 
         consultant.id === editingConsultant.id 
-          ? { ...consultant, ...formData, phone: formData.phone || undefined, department: formData.department || undefined, specialization: formData.specialization || undefined }
+          ? { ...consultant, ...formData }
           : consultant
       ));
 

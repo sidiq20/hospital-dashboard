@@ -130,16 +130,16 @@ export function Staff() {
       const docRef = doc(db, 'users', editingStaff.id);
       await updateDoc(docRef, {
         name: formData.name,
-        phone: formData.phone || undefined,
-        department: formData.department || undefined,
-        specialization: formData.specialization || undefined,
+        phone: formData.phone,
+        department: formData.department,
+        specialization: formData.specialization,
         role: formData.role
       });
 
       // Update local state
       setStaff(prev => prev.map(member => 
         member.id === editingStaff.id 
-          ? { ...member, ...formData, phone: formData.phone || undefined, department: formData.department || undefined, specialization: formData.specialization || undefined }
+          ? { ...member, ...formData }
           : member
       ));
 
