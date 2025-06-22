@@ -1,5 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card';
-import type { LucideIcon } from 'lucide-react';
+import { DivideIcon as LucideIcon } from 'lucide-react';
 
 interface StatCardProps {
   title: string;

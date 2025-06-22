@@ -125,8 +125,8 @@ export function Dashboard() {
         <p className="text-gray-600">Welcome back! Here's what's happening at your hospital today.</p>
       </div>
 
-      {/* Main Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+      {/* Main Stats Grid - Hidden on mobile */}
+      <div className="hidden md:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <StatCard
           title="Total Patients"
           value={stats.totalPatients}
@@ -147,8 +147,8 @@ export function Dashboard() {
         />
       </div>
 
-      {/* Procedure Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+      {/* Procedure Stats Grid - Hidden on mobile */}
+      <div className="hidden md:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <StatCard
           title="Procedures Pending"
           value={stats.proceduresPending}

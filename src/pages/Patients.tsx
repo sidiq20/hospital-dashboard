@@ -101,13 +101,15 @@ export function Patients() {
       }
     }
 
-    // Search filter
+    // Search filter - now includes doctor name
     if (searchTerm) {
       filtered = filtered.filter(patient =>
         patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         patient.diagnosis.toLowerCase().includes(searchTerm.toLowerCase()) ||
         patient.phone.includes(searchTerm) ||
-        (patient.procedure && patient.procedure.toLowerCase().includes(searchTerm.toLowerCase()))
+        (patient.procedure && patient.procedure.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (patient.doctorName && patient.doctorName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (patient.consultantName && patient.consultantName.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
@@ -287,7 +289,7 @@ export function Patients() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Search by name, diagnosis, procedure, or phone..."
+                placeholder="Search by name, diagnosis, procedure, phone, doctor, or consultant..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 bg-white border-gray-300"
@@ -345,6 +347,7 @@ export function Patients() {
                   <TableHead className="hidden sm:table-cell text-gray-900">Age</TableHead>
                   <TableHead className="hidden md:table-cell min-w-[200px] text-gray-900">Diagnosis</TableHead>
                   <TableHead className="hidden lg:table-cell min-w-[200px] text-gray-900">Procedure</TableHead>
+                  <TableHead className="hidden xl:table-cell text-gray-900">Doctor</TableHead>
                   <TableHead className="hidden xl:table-cell text-gray-900">Admission Date</TableHead>
                   <TableHead className="text-right min-w-[120px] text-gray-900">Actions</TableHead>
                 </TableRow>
@@ -372,6 +375,11 @@ export function Patients() {
                             {patient.doctorName && (
                               <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
                                 Dr. {patient.doctorName}
+                              </span>
+                            )}
+                            {patient.consultantName && (
+                              <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                                Consultant: {patient.consultantName}
                               </span>
                             )}
                           </div>
@@ -408,6 +416,18 @@ export function Patients() {
                           </div>
                         ) : (
                           <span className="text-gray-400 text-sm">No procedure</span>
+                        )}
+                      </TableCell>
+                      <TableCell className={`hidden xl:table-cell ${getCellBackgroundColor(patient)}`}>
+                        {patient.doctorName ? (
+                          <div className="text-sm">
+                            <p className="font-medium text-gray-900">Dr. {patient.doctorName}</p>
+                            {patient.consultantName && (
+                              <p className="text-xs text-green-600">Consultant: {patient.consultantName}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-sm">Unknown</span>
                         )}
                       </TableCell>
                       <TableCell className={`hidden xl:table-cell ${getCellBackgroundColor(patient)} text-gray-900`}>

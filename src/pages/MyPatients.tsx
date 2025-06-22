@@ -73,7 +73,8 @@ export function MyPatients() {
         patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         patient.diagnosis.toLowerCase().includes(searchTerm.toLowerCase()) ||
         patient.phone.includes(searchTerm) ||
-        (patient.procedure && patient.procedure.toLowerCase().includes(searchTerm.toLowerCase()))
+        (patient.procedure && patient.procedure.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (patient.consultantName && patient.consultantName.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
@@ -279,7 +280,7 @@ export function MyPatients() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Search by name, diagnosis, procedure, or phone..."
+                placeholder="Search by name, diagnosis, procedure, phone, or consultant..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 bg-white border-gray-300"
