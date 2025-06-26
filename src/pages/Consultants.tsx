@@ -51,7 +51,8 @@ export function Consultants() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editingConsultant, setEditingConsultant] = useState<User | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
     department: '',
@@ -93,8 +94,10 @@ export function Consultants() {
 
   const handleEditConsultant = (consultant: User) => {
     setEditingConsultant(consultant);
+    const nameParts = (consultant.name || '').split(' ');
     setFormData({
-      name: consultant.name || '',
+      firstName: nameParts[0] || '',
+      lastName: nameParts.slice(1).join(' ') || '',
       email: consultant.email || '',
       phone: consultant.phone || '',
       department: consultant.department || '',
@@ -105,7 +108,8 @@ export function Consultants() {
 
   const handleAddConsultant = () => {
     setFormData({
-      name: '',
+      firstName: '',
+      lastName: '',
       email: '',
       phone: '',
       department: '',
@@ -119,9 +123,10 @@ export function Consultants() {
 
     setUpdating(true);
     try {
+      const fullName = `${formData.firstName} ${formData.lastName}`.trim();
       const docRef = doc(db, 'users', editingConsultant.id);
       await updateDoc(docRef, {
-        name: formData.name,
+        name: fullName,
         phone: formData.phone,
         department: formData.department,
         specialization: formData.specialization
@@ -130,7 +135,7 @@ export function Consultants() {
       // Update local state
       setConsultants(prev => prev.map(consultant => 
         consultant.id === editingConsultant.id 
-          ? { ...consultant, ...formData }
+          ? { ...consultant, name: fullName, phone: formData.phone, department: formData.department, specialization: formData.specialization }
           : consultant
       ));
 
@@ -146,16 +151,17 @@ export function Consultants() {
   };
 
   const handleCreateConsultant = async () => {
-    if (!formData.name || !formData.email) {
-      toast.error('Name and email are required');
+    if (!formData.firstName || !formData.lastName) {
+      toast.error('First name and last name are required');
       return;
     }
 
     setUpdating(true);
     try {
+      const fullName = `${formData.firstName} ${formData.lastName}`.trim();
       const consultantData = {
-        name: formData.name,
-        email: formData.email,
+        name: fullName,
+        email: formData.email || `${formData.firstName.toLowerCase()}.${formData.lastName.toLowerCase()}@hospital.com`,
         role: 'consultant' as const,
         phone: formData.phone || undefined,
         department: formData.department || undefined,
@@ -379,14 +385,25 @@ export function Consultants() {
             <DialogTitle>Edit Consultant</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="editName">Name</Label>
-              <Input
-                id="editName"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Enter full name"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="editFirstName">First Name *</Label>
+                <Input
+                  id="editFirstName"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                  placeholder="Enter first name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editLastName">Last Name *</Label>
+                <Input
+                  id="editLastName"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                  placeholder="Enter last name"
+                />
+              </div>
             </div>
             <div>
               <Label htmlFor="editPhone">Phone</Label>
@@ -418,7 +435,7 @@ export function Consultants() {
             <div className="flex gap-2 pt-4">
               <Button 
                 onClick={handleUpdateConsultant} 
-                disabled={updating || !formData.name.trim()}
+                disabled={updating || !formData.firstName.trim() || !formData.lastName.trim()}
                 className="flex-1"
               >
                 {updating ? 'Updating...' : 'Update Consultant'}
@@ -442,23 +459,34 @@ export function Consultants() {
             <DialogTitle>Add New Consultant</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="addName">Name *</Label>
-              <Input
-                id="addName"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Enter full name"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="addFirstName">First Name *</Label>
+                <Input
+                  id="addFirstName"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                  placeholder="Enter first name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="addLastName">Last Name *</Label>
+                <Input
+                  id="addLastName"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                  placeholder="Enter last name"
+                />
+              </div>
             </div>
             <div>
-              <Label htmlFor="addEmail">Email *</Label>
+              <Label htmlFor="addEmail">Email (Optional)</Label>
               <Input
                 id="addEmail"
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="Enter email address"
+                placeholder="Enter email address (auto-generated if empty)"
               />
             </div>
             <div>
@@ -491,7 +519,7 @@ export function Consultants() {
             <div className="flex gap-2 pt-4">
               <Button 
                 onClick={handleCreateConsultant} 
-                disabled={updating || !formData.name.trim() || !formData.email.trim()}
+                disabled={updating || !formData.firstName.trim() || !formData.lastName.trim()}
                 className="flex-1"
               >
                 {updating ? 'Adding...' : 'Add Consultant'}

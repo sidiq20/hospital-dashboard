@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { 
-  TrendingUp, 
   Users, 
   Building2, 
   Calendar,
@@ -146,9 +145,9 @@ export function Reports() {
 
   const getProcedureStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      pending: '#f59e0b',
-      reviewed: '#3b82f6',
-      completed: '#10b981'
+      pending: '#6b7280',
+      reviewed: '#9ca3af',
+      completed: '#ffffff'
     };
     return colors[status] || '#6b7280';
   };
@@ -220,16 +219,16 @@ export function Reports() {
     }
   };
 
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#6b7280'];
+  const COLORS = ['#ffffff', '#d1d5db', '#9ca3af', '#6b7280', '#4b5563', '#374151', '#1f2937', '#111827'];
 
   if (loading) {
     return (
-      <div className="p-4 sm:p-6 lg:p-8 bg-white min-h-screen">
+      <div className="p-4 sm:p-6 lg:p-8 bg-black min-h-screen">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+          <div className="h-8 bg-gray-800 rounded w-1/4 mb-6"></div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-64 bg-gray-200 rounded"></div>
+              <div key={i} className="h-64 bg-gray-800 rounded"></div>
             ))}
           </div>
         </div>
@@ -246,12 +245,12 @@ export function Reports() {
   const weeklyData = getWeeklyPatientData();
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-white min-h-screen">
+    <div className="p-4 sm:p-6 lg:p-8 bg-black min-h-screen">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Reports & Analytics</h1>
-          <p className="text-gray-600">Comprehensive insights into hospital operations and performance</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Reports & Analytics</h1>
+          <p className="text-gray-400">Comprehensive insights into hospital operations and performance</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <div className="flex items-center gap-2">
@@ -259,7 +258,7 @@ export function Reports() {
             <select
               value={weekFilter}
               onChange={(e) => setWeekFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-black"
             >
               <option value="all">All Time</option>
               {weeklyData.map((week, index) => (
@@ -270,90 +269,72 @@ export function Reports() {
             </select>
           </div>
           <ExportDialog onExport={handleExport} loading={exporting} />
-          <Button variant="outline" className="flex items-center gap-2">
+          <Button variant="outline" className="flex items-center gap-2 bg-white text-black border-gray-300 hover:bg-gray-100">
             <RefreshCw className="h-4 w-4" />
-            Refresh
+            <span className="text-black">Refresh</span>
           </Button>
         </div>
       </div>
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-          <CardContent className="p-6">
+        <Card className="bg-gray-900 border-gray-800">
+          <CardContent className="p-6 bg-gray-900">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-700">
+                <p className="text-sm font-medium text-gray-400">
                   {weekFilter === 'all' ? 'Total Patients' : 'Patients This Week'}
                 </p>
-                <p className="text-2xl font-bold text-blue-900">{filteredPatients.length}</p>
-                <div className="flex items-center gap-1 mt-1">
-                  <TrendingUp className="h-3 w-3 text-green-600" />
-                  <span className="text-xs text-green-600">
-                    {weekFilter === 'all' ? '+12% from last month' : 'This week'}
-                  </span>
-                </div>
+                <p className="text-2xl font-bold text-white">{filteredPatients.length}</p>
               </div>
-              <div className="h-12 w-12 bg-blue-200 rounded-lg flex items-center justify-center">
-                <Users className="h-6 w-6 text-blue-700" />
+              <div className="h-12 w-12 bg-gray-800 rounded-lg flex items-center justify-center">
+                <Users className="h-6 w-6 text-white" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-          <CardContent className="p-6">
+        <Card className="bg-gray-900 border-gray-800">
+          <CardContent className="p-6 bg-gray-900">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-700">Active Patients</p>
-                <p className="text-2xl font-bold text-green-900">
+                <p className="text-sm font-medium text-gray-400">Active Patients</p>
+                <p className="text-2xl font-bold text-white">
                   {filteredPatients.filter(p => p.status === 'active').length}
                 </p>
-                <div className="flex items-center gap-1 mt-1">
-                  <TrendingUp className="h-3 w-3 text-green-600" />
-                  <span className="text-xs text-green-600">Currently active</span>
-                </div>
               </div>
-              <div className="h-12 w-12 bg-green-200 rounded-lg flex items-center justify-center">
-                <Users className="h-6 w-6 text-green-700" />
+              <div className="h-12 w-12 bg-gray-800 rounded-lg flex items-center justify-center">
+                <Users className="h-6 w-6 text-white" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
-          <CardContent className="p-6">
+        <Card className="bg-gray-900 border-gray-800">
+          <CardContent className="p-6 bg-gray-900">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-yellow-700">Completed Cases</p>
-                <p className="text-2xl font-bold text-yellow-900">
+                <p className="text-sm font-medium text-gray-400">Completed Cases</p>
+                <p className="text-2xl font-bold text-white">
                   {filteredPatients.filter(p => p.status === 'done').length}
                 </p>
-                <div className="flex items-center gap-1 mt-1">
-                  <TrendingUp className="h-3 w-3 text-green-600" />
-                  <span className="text-xs text-green-600">Cases done</span>
-                </div>
               </div>
-              <div className="h-12 w-12 bg-yellow-200 rounded-lg flex items-center justify-center">
-                <Calendar className="h-6 w-6 text-yellow-700" />
+              <div className="h-12 w-12 bg-gray-800 rounded-lg flex items-center justify-center">
+                <Calendar className="h-6 w-6 text-white" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-          <CardContent className="p-6">
+        <Card className="bg-gray-900 border-gray-800">
+          <CardContent className="p-6 bg-gray-900">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-700">Total Wards</p>
-                <p className="text-2xl font-bold text-purple-900">{wards.length}</p>
-                <div className="flex items-center gap-1 mt-1">
-                  <TrendingUp className="h-3 w-3 text-green-600" />
-                  <span className="text-xs text-green-600">Available</span>
-                </div>
+                <p className="text-sm font-medium text-gray-400">Total Wards</p>
+                <p className="text-2xl font-bold text-white">{wards.length}</p>
               </div>
-              <div className="h-12 w-12 bg-purple-200 rounded-lg flex items-center justify-center">
-                <Building2 className="h-6 w-6 text-purple-700" />
+              <div className="h-12 w-12 bg-gray-800 rounded-lg flex items-center justify-center">
+                <Building2 className="h-6 w-6 text-white" />
               </div>
             </div>
           </CardContent>
@@ -363,18 +344,18 @@ export function Reports() {
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
         {/* Procedure Status Distribution */}
-        <Card className="bg-white border border-gray-200">
-          <CardHeader className="bg-white">
-            <CardTitle className="text-gray-900">
+        <Card className="bg-gray-900 border-gray-800">
+          <CardHeader className="bg-gray-900">
+            <CardTitle className="text-white">
               Procedure Status Distribution
               {weekFilter !== 'all' && (
-                <Badge variant="outline" className="ml-2">
+                <Badge variant="outline" className="ml-2 bg-gray-800 text-gray-300 border-gray-600">
                   Week of {weeklyData[parseInt(weekFilter)]?.week}
                 </Badge>
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="bg-white">
+          <CardContent className="bg-gray-900">
             {procedureStatusData.length > 0 ? (
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
@@ -399,32 +380,32 @@ export function Reports() {
               </div>
             ) : (
               <div className="h-64 flex items-center justify-center">
-                <p className="text-gray-500">No procedures to display</p>
+                <p className="text-gray-400">No procedures to display</p>
               </div>
             )}
           </CardContent>
         </Card>
 
         {/* Ward Information */}
-        <Card className="bg-white border border-gray-200">
-          <CardHeader className="bg-white">
-            <CardTitle className="text-gray-900">Ward Information</CardTitle>
+        <Card className="bg-gray-900 border-gray-800">
+          <CardHeader className="bg-gray-900">
+            <CardTitle className="text-white">Ward Information</CardTitle>
           </CardHeader>
-          <CardContent className="bg-white">
+          <CardContent className="bg-gray-900">
             <div className="space-y-4">
               {wards.map((ward, index) => (
-                <div key={ward.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div key={ward.id} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div 
                       className="w-4 h-4 rounded-full"
                       style={{ backgroundColor: COLORS[index % COLORS.length] }}
                     />
                     <div>
-                      <span className="font-medium text-gray-900">{ward.name}</span>
-                      <p className="text-sm text-gray-600">{ward.department}</p>
+                      <span className="font-medium text-white">{ward.name}</span>
+                      <p className="text-sm text-gray-400">{ward.department}</p>
                     </div>
                   </div>
-                  <Badge variant="outline" className="min-w-[4rem] justify-center">
+                  <Badge variant="outline" className="min-w-[4rem] justify-center bg-gray-700 text-gray-300 border-gray-600">
                     {ward.wardType}
                   </Badge>
                 </div>
@@ -434,32 +415,39 @@ export function Reports() {
         </Card>
 
         {/* Weekly Admission Trends */}
-        <Card className="bg-white border border-gray-200">
-          <CardHeader className="bg-white">
-            <CardTitle className="text-gray-900">Weekly Patient Admissions (Last 8 Weeks)</CardTitle>
+        <Card className="bg-gray-900 border-gray-800">
+          <CardHeader className="bg-gray-900">
+            <CardTitle className="text-white">Weekly Patient Admissions (Last 8 Weeks)</CardTitle>
           </CardHeader>
-          <CardContent className="bg-white">
+          <CardContent className="bg-gray-900">
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={admissionTrends}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="week" />
-                  <YAxis />
-                  <Tooltip />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="week" stroke="#9ca3af" />
+                  <YAxis stroke="#9ca3af" />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#1f2937', 
+                      border: '1px solid #374151',
+                      borderRadius: '8px',
+                      color: '#ffffff'
+                    }}
+                  />
                   <Area 
                     type="monotone" 
                     dataKey="admissions" 
                     stackId="1" 
-                    stroke="#3b82f6" 
-                    fill="#3b82f6" 
+                    stroke="#ffffff" 
+                    fill="#ffffff" 
                     fillOpacity={0.6}
                   />
                   <Area 
                     type="monotone" 
                     dataKey="discharges" 
                     stackId="2" 
-                    stroke="#10b981" 
-                    fill="#10b981" 
+                    stroke="#9ca3af" 
+                    fill="#9ca3af" 
                     fillOpacity={0.6}
                   />
                 </AreaChart>
@@ -469,18 +457,18 @@ export function Reports() {
         </Card>
 
         {/* Department Statistics */}
-        <Card className="bg-white border border-gray-200">
-          <CardHeader className="bg-white">
-            <CardTitle className="text-gray-900">
+        <Card className="bg-gray-900 border-gray-800">
+          <CardHeader className="bg-gray-900">
+            <CardTitle className="text-white">
               Patients by Department
               {weekFilter !== 'all' && (
-                <Badge variant="outline" className="ml-2">
+                <Badge variant="outline" className="ml-2 bg-gray-800 text-gray-300 border-gray-600">
                   Week of {weeklyData[parseInt(weekFilter)]?.week}
                 </Badge>
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="bg-white">
+          <CardContent className="bg-gray-900">
             <div className="space-y-4">
               {departmentStats.map((dept, index) => (
                 <div key={dept.department} className="flex items-center justify-between">
@@ -489,7 +477,7 @@ export function Reports() {
                       className="w-4 h-4 rounded-full"
                       style={{ backgroundColor: COLORS[index % COLORS.length] }}
                     />
-                    <span className="font-medium text-gray-900">{dept.department}</span>
+                    <span className="font-medium text-white">{dept.department}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-32">
@@ -498,63 +486,12 @@ export function Reports() {
                         className="h-2"
                       />
                     </div>
-                    <Badge variant="outline" className="min-w-[3rem] justify-center">
+                    <Badge variant="outline" className="min-w-[3rem] justify-center bg-gray-800 text-gray-300 border-gray-600">
                       {dept.patients}
                     </Badge>
                   </div>
                 </div>
               ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Additional Insights */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="bg-white border border-gray-200">
-          <CardHeader className="bg-white">
-            <CardTitle className="text-lg text-gray-900">Average Length of Stay</CardTitle>
-          </CardHeader>
-          <CardContent className="bg-white">
-            <div className="text-center">
-              <p className="text-3xl font-bold text-blue-600">5.2</p>
-              <p className="text-sm text-gray-600">days</p>
-              <div className="mt-2 flex items-center justify-center gap-1">
-                <TrendingUp className="h-3 w-3 text-red-600" />
-                <span className="text-xs text-red-600">-0.3 days from last month</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white border border-gray-200">
-          <CardHeader className="bg-white">
-            <CardTitle className="text-lg text-gray-900">Procedure Completion Rate</CardTitle>
-          </CardHeader>
-          <CardContent className="bg-white">
-            <div className="text-center">
-              <p className="text-3xl font-bold text-green-600">92.5%</p>
-              <p className="text-sm text-gray-600">completed on time</p>
-              <div className="mt-2 flex items-center justify-center gap-1">
-                <TrendingUp className="h-3 w-3 text-green-600" />
-                <span className="text-xs text-green-600">+2.1% from last month</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white border border-gray-200">
-          <CardHeader className="bg-white">
-            <CardTitle className="text-lg text-gray-900">Patient Satisfaction</CardTitle>
-          </CardHeader>
-          <CardContent className="bg-white">
-            <div className="text-center">
-              <p className="text-3xl font-bold text-green-600">4.7</p>
-              <p className="text-sm text-gray-600">out of 5.0</p>
-              <div className="mt-2 flex items-center justify-center gap-1">
-                <TrendingUp className="h-3 w-3 text-green-600" />
-                <span className="text-xs text-green-600">+0.2 from last month</span>
-              </div>
             </div>
           </CardContent>
         </Card>

@@ -36,23 +36,23 @@ export function PatientNoteDialog({ onAddNote, loading }: PatientNoteDialogProps
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="flex items-center gap-2">
+        <Button variant="outline" className="flex items-center gap-2 bg-white text-white border-gray-300 hover:bg-gray-100">
           <MessageSquare className="h-4 w-4" />
           Add Note
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="bg-white border-gray-300">
         <DialogHeader>
-          <DialogTitle>Add Patient Note</DialogTitle>
+          <DialogTitle className="text-white">Add Patient Note</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label htmlFor="noteType">Note Type</Label>
+            <Label htmlFor="noteType" className="text-black font-medium">Note Type</Label>
             <select
               id="noteType"
               value={noteType}
               onChange={(e) => setNoteType(e.target.value as any)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-black"
             >
               <option value="general">General</option>
               <option value="medical">Medical</option>
@@ -61,19 +61,20 @@ export function PatientNoteDialog({ onAddNote, loading }: PatientNoteDialogProps
             </select>
           </div>
           <div>
-            <Label htmlFor="noteContent">Note Content</Label>
+            <Label htmlFor="noteContent" className="text-black font-medium">Note Content</Label>
             <Textarea
               id="noteContent"
               value={noteContent}
               onChange={(e) => setNoteContent(e.target.value)}
               placeholder="Enter your note here..."
               rows={4}
+              className="bg-white border-gray-300 text-black placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
           <Button 
             onClick={handleSubmit} 
             disabled={loading || !noteContent.trim()}
-            className="w-full"
+            className="w-full bg-blue-600 text-white hover:bg-blue-700"
           >
             {loading ? 'Adding Note...' : 'Add Note'}
           </Button>

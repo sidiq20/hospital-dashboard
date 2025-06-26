@@ -42,6 +42,7 @@ export interface Patient {
   notes: PatientNote[];
   appointments: Appointment[];
   biopsyResults: BiopsyResult[];
+  reviews: PatientReview[]; // Added reviews array
   createdAt: Date;
   updatedAt: Date;
 }
@@ -79,6 +80,26 @@ export interface BiopsyResult {
   performedByName: string;
   performedDate: Date;
   createdAt: Date;
+}
+
+export interface PatientReview {
+  id: string;
+  type: 'ct_images' | 'mri_images' | 'ultrasound_images' | 'blood_tests' | 'inr';
+  title: string;
+  description?: string;
+  images: ReviewImage[];
+  textContent?: string;
+  createdBy: string;
+  createdByName: string;
+  createdAt: Date;
+}
+
+export interface ReviewImage {
+  id: string;
+  url: string;
+  filename: string;
+  size: number;
+  uploadedAt: Date;
 }
 
 export interface Ward {

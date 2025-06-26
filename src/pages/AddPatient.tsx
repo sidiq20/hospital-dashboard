@@ -42,6 +42,7 @@ export function AddPatient() {
         notes: [],
         appointments: [],
         biopsyResults: [],
+        reviews: [],
       };
 
       await createPatient(patientData, userProfile?.id, userProfile?.name);

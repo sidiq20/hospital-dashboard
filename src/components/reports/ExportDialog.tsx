@@ -122,14 +122,14 @@ export function ExportDialog({ onExport, loading }: ExportDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="flex items-center gap-2">
+        <Button variant="outline" className="flex items-center gap-2 bg-white text-black border-gray-300 hover:bg-gray-100">
           <Download className="h-4 w-4" />
-          Export Report
+          <span className="text-black">Export Report</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white border-gray-300">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 text-black">
             <Download className="h-5 w-5" />
             Export Hospital Report
           </DialogTitle>
@@ -137,14 +137,14 @@ export function ExportDialog({ onExport, loading }: ExportDialogProps) {
         
         <div className="space-y-6">
           {/* Date Range Selection */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
+          <Card className="bg-white border-gray-200">
+            <CardHeader className="bg-white">
+              <CardTitle className="text-lg flex items-center gap-2 text-black">
                 <Calendar className="h-5 w-5" />
                 Date Range
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 bg-white">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {dateRangeOptions.map((option) => (
                   <Button
@@ -152,9 +152,15 @@ export function ExportDialog({ onExport, loading }: ExportDialogProps) {
                     variant={config.dateRange.type === option.value ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => handleDateRangeChange(option.value as any)}
-                    className="justify-start"
+                    className={`justify-start ${
+                      config.dateRange.type === option.value 
+                        ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                        : 'bg-white border-gray-300 text-black hover:bg-gray-100'
+                    }`}
                   >
-                    {option.label}
+                    <span className={config.dateRange.type === option.value ? 'text-white' : 'text-black'}>
+                      {option.label}
+                    </span>
                   </Button>
                 ))}
               </div>
@@ -162,38 +168,40 @@ export function ExportDialog({ onExport, loading }: ExportDialogProps) {
               {config.dateRange.type === 'custom' && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="startDate">Start Date</Label>
+                    <Label htmlFor="startDate" className="text-black font-medium">Start Date</Label>
                     <Input
                       id="startDate"
                       type="date"
                       value={config.dateRange.start.toISOString().split('T')[0]}
                       onChange={(e) => handleCustomDateChange('start', e.target.value)}
+                      className="bg-white border-gray-300 text-black focus:border-blue-500 focus:ring-blue-500"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="endDate">End Date</Label>
+                    <Label htmlFor="endDate" className="text-black font-medium">End Date</Label>
                     <Input
                       id="endDate"
                       type="date"
                       value={config.dateRange.end.toISOString().split('T')[0]}
                       onChange={(e) => handleCustomDateChange('end', e.target.value)}
+                      className="bg-white border-gray-300 text-black focus:border-blue-500 focus:ring-blue-500"
                     />
                   </div>
                 </div>
               )}
               
-              <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+              <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg border border-gray-200">
                 <strong>Selected Range:</strong> {config.dateRange.start.toLocaleDateString()} - {config.dateRange.end.toLocaleDateString()}
               </div>
             </CardContent>
           </Card>
 
           {/* Format Selection */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Export Format</CardTitle>
+          <Card className="bg-white border-gray-200">
+            <CardHeader className="bg-white">
+              <CardTitle className="text-lg text-black">Export Format</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="bg-white">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {formatOptions.map((format) => {
                   const Icon = format.icon;
@@ -203,14 +211,14 @@ export function ExportDialog({ onExport, loading }: ExportDialogProps) {
                       className={`p-4 border rounded-lg cursor-pointer transition-all ${
                         config.format === format.value
                           ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                       }`}
                       onClick={() => setConfig(prev => ({ ...prev, format: format.value as any }))}
                     >
                       <div className="flex items-start gap-3">
                         <Icon className="h-5 w-5 text-gray-600 mt-0.5" />
                         <div>
-                          <h4 className="font-medium text-gray-900">{format.label}</h4>
+                          <h4 className="font-medium text-black">{format.label}</h4>
                           <p className="text-sm text-gray-600">{format.description}</p>
                         </div>
                       </div>
@@ -222,16 +230,16 @@ export function ExportDialog({ onExport, loading }: ExportDialogProps) {
           </Card>
 
           {/* Report Sections */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Report Sections</CardTitle>
+          <Card className="bg-white border-gray-200">
+            <CardHeader className="bg-white">
+              <CardTitle className="text-lg text-black">Report Sections</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="bg-white">
               <div className="space-y-3">
                 {Object.entries(config.sections).map(([key, enabled]) => (
                   <div key={key} className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-medium text-gray-900 capitalize">
+                      <h4 className="font-medium text-black capitalize">
                         {key === 'analytics' ? 'Analytics & Charts' : key}
                       </h4>
                       <p className="text-sm text-gray-600">
@@ -249,26 +257,38 @@ export function ExportDialog({ onExport, loading }: ExportDialogProps) {
                         ...prev,
                         sections: { ...prev.sections, [key]: !enabled }
                       }))}
+                      className={enabled 
+                        ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                        : 'bg-white border-gray-300 text-black hover:bg-gray-100'
+                      }
                     >
-                      {enabled ? 'Included' : 'Excluded'}
+                      <span className={enabled ? 'text-white' : 'text-black'}>
+                        {enabled ? 'Included' : 'Excluded'}
+                      </span>
                     </Button>
                   </div>
                 ))}
               </div>
               
               {config.format === 'pdf' && (
-                <div className="mt-4 pt-4 border-t">
+                <div className="mt-4 pt-4 border-t border-gray-200">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-medium text-gray-900">Include Charts & Graphs</h4>
+                      <h4 className="font-medium text-black">Include Charts & Graphs</h4>
                       <p className="text-sm text-gray-600">Add visual charts to the PDF report</p>
                     </div>
                     <Button
                       variant={config.includeCharts ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setConfig(prev => ({ ...prev, includeCharts: !prev.includeCharts }))}
+                      className={config.includeCharts 
+                        ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                        : 'bg-white border-gray-300 text-black hover:bg-gray-100'
+                      }
                     >
-                      {config.includeCharts ? 'Yes' : 'No'}
+                      <span className={config.includeCharts ? 'text-white' : 'text-black'}>
+                        {config.includeCharts ? 'Yes' : 'No'}
+                      </span>
                     </Button>
                   </div>
                 </div>
@@ -277,10 +297,10 @@ export function ExportDialog({ onExport, loading }: ExportDialogProps) {
           </Card>
 
           {/* Export Summary */}
-          <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="p-4">
-              <h4 className="font-medium text-blue-900 mb-2">Export Summary</h4>
-              <div className="space-y-1 text-sm text-blue-800">
+          <Card className="bg-gray-50 border-gray-200">
+            <CardContent className="p-4 bg-gray-50">
+              <h4 className="font-medium text-black mb-2">Export Summary</h4>
+              <div className="space-y-1 text-sm text-gray-700">
                 <p><strong>Format:</strong> {formatOptions.find(f => f.value === config.format)?.label}</p>
                 <p><strong>Date Range:</strong> {config.dateRange.start.toLocaleDateString()} - {config.dateRange.end.toLocaleDateString()}</p>
                 <p><strong>Sections:</strong> {Object.values(config.sections).filter(Boolean).length} of {Object.keys(config.sections).length} included</p>
@@ -296,22 +316,27 @@ export function ExportDialog({ onExport, loading }: ExportDialogProps) {
             <Button 
               onClick={handleExport} 
               disabled={loading}
-              className="flex-1"
+              className="flex-1 bg-blue-600 text-white hover:bg-blue-700"
             >
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                  Generating Report...
+                  <span className="text-white">Generating Report...</span>
                 </>
               ) : (
                 <>
                   <Download className="h-4 w-4 mr-2" />
-                  Export Report
+                  <span className="text-white">Export Report</span>
                 </>
               )}
             </Button>
-            <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
-              Cancel
+            <Button 
+              variant="outline" 
+              onClick={() => setOpen(false)} 
+              disabled={loading}
+              className="bg-white border-gray-300 text-black hover:bg-gray-100"
+            >
+              <span className="text-black">Cancel</span>
             </Button>
           </div>
         </div>

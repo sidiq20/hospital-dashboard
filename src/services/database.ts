@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { removeUndefined } from '@/lib/utils';
-import { Patient, Ward, User, DashboardStats, PatientNote, Appointment, BiopsyResult, ProcedureAnalytics } from '@/types';
+import { Patient, Ward, User, DashboardStats, PatientNote, Appointment, BiopsyResult, PatientReview, ProcedureAnalytics } from '@/types';
 
 // Helper function to safely convert Firestore timestamps
 const convertTimestamp = (timestamp: any): Date => {
@@ -45,6 +45,14 @@ const convertPatientData = (data: any): Patient => {
       ...result,
       performedDate: convertTimestamp(result.performedDate),
       createdAt: convertTimestamp(result.createdAt)
+    })),
+    reviews: (data.reviews || []).map((review: any) => ({
+      ...review,
+      createdAt: convertTimestamp(review.createdAt),
+      images: (review.images || []).map((img: any) => ({
+        ...img,
+        uploadedAt: convertTimestamp(img.uploadedAt)
+      }))
     }))
   };
 };
@@ -57,6 +65,7 @@ export const createPatient = async (patient: Omit<Patient, 'id' | 'createdAt' | 
       notes: patient.notes || [],
       appointments: patient.appointments || [],
       biopsyResults: patient.biopsyResults || [],
+      reviews: patient.reviews || [],
       procedureStatus: patient.procedure ? (patient.procedureStatus || 'pending') : undefined,
       doctorId: doctorId,
       doctorName: doctorName,
@@ -217,6 +226,25 @@ export const addBiopsyResult = async (patientId: string, biopsyResult: Omit<Biop
   } catch (error) {
     console.error('Error adding biopsy result:', error);
     throw new Error('Failed to add biopsy result');
+  }
+};
+
+export const addPatientReview = async (patientId: string, review: Omit<PatientReview, 'id'>) => {
+  try {
+    const reviewWithId = removeUndefined({
+      ...review,
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      createdAt: new Date()
+    });
+    
+    const docRef = doc(db, 'patients', patientId);
+    await updateDoc(docRef, {
+      reviews: arrayUnion(reviewWithId),
+      updatedAt: new Date()
+    });
+  } catch (error) {
+    console.error('Error adding patient review:', error);
+    throw new Error('Failed to add patient review');
   }
 };
 

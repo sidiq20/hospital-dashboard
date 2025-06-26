@@ -53,7 +53,8 @@ export function Staff() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<User | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
     department: '',
@@ -99,8 +100,10 @@ export function Staff() {
 
   const handleEditStaff = (member: User) => {
     setEditingStaff(member);
+    const nameParts = (member.name || '').split(' ');
     setFormData({
-      name: member.name || '',
+      firstName: nameParts[0] || '',
+      lastName: nameParts.slice(1).join(' ') || '',
       email: member.email || '',
       phone: member.phone || '',
       department: member.department || '',
@@ -112,7 +115,8 @@ export function Staff() {
 
   const handleAddStaff = () => {
     setFormData({
-      name: '',
+      firstName: '',
+      lastName: '',
       email: '',
       phone: '',
       department: '',
@@ -127,9 +131,10 @@ export function Staff() {
 
     setUpdating(true);
     try {
+      const fullName = `${formData.firstName} ${formData.lastName}`.trim();
       const docRef = doc(db, 'users', editingStaff.id);
       await updateDoc(docRef, {
-        name: formData.name,
+        name: fullName,
         phone: formData.phone,
         department: formData.department,
         specialization: formData.specialization,
@@ -139,7 +144,7 @@ export function Staff() {
       // Update local state
       setStaff(prev => prev.map(member => 
         member.id === editingStaff.id 
-          ? { ...member, ...formData }
+          ? { ...member, name: fullName, phone: formData.phone, department: formData.department, specialization: formData.specialization, role: formData.role }
           : member
       ));
 
@@ -155,16 +160,17 @@ export function Staff() {
   };
 
   const handleCreateStaff = async () => {
-    if (!formData.name || !formData.email) {
-      toast.error('Name and email are required');
+    if (!formData.firstName || !formData.lastName) {
+      toast.error('First name and last name are required');
       return;
     }
 
     setUpdating(true);
     try {
+      const fullName = `${formData.firstName} ${formData.lastName}`.trim();
       const staffData = {
-        name: formData.name,
-        email: formData.email,
+        name: fullName,
+        email: formData.email || `${formData.firstName.toLowerCase()}.${formData.lastName.toLowerCase()}@hospital.com`,
         role: formData.role,
         phone: formData.phone || undefined,
         department: formData.department || undefined,
@@ -198,9 +204,9 @@ export function Staff() {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'doctor': return 'default';
-      case 'consultant': return 'secondary';
-      default: return 'outline';
+      case 'doctor': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'consultant': return 'bg-green-100 text-green-800 border-green-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -360,8 +366,10 @@ export function Staff() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={getRoleColor(member.role)} className="capitalize">
-                          {member.role}
+                        <Badge className={`capitalize border ${getRoleColor(member.role)}`}>
+                          <span className={member.role === 'doctor' ? 'text-blue-800' : 'text-green-800'}>
+                            {member.role}
+                          </span>
                         </Badge>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">
@@ -463,14 +471,25 @@ export function Staff() {
             <DialogTitle>Edit Staff Member</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="editName">Name</Label>
-              <Input
-                id="editName"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Enter full name"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="editFirstName">First Name *</Label>
+                <Input
+                  id="editFirstName"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                  placeholder="Enter first name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editLastName">Last Name *</Label>
+                <Input
+                  id="editLastName"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                  placeholder="Enter last name"
+                />
+              </div>
             </div>
             <div>
               <Label htmlFor="editRole">Role</Label>
@@ -514,7 +533,7 @@ export function Staff() {
             <div className="flex gap-2 pt-4">
               <Button 
                 onClick={handleUpdateStaff} 
-                disabled={updating || !formData.name.trim()}
+                disabled={updating || !formData.firstName.trim() || !formData.lastName.trim()}
                 className="flex-1"
               >
                 {updating ? 'Updating...' : 'Update Staff Member'}
@@ -538,23 +557,34 @@ export function Staff() {
             <DialogTitle>Add New Staff Member</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="addName">Name *</Label>
-              <Input
-                id="addName"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Enter full name"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="addFirstName">First Name *</Label>
+                <Input
+                  id="addFirstName"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                  placeholder="Enter first name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="addLastName">Last Name *</Label>
+                <Input
+                  id="addLastName"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                  placeholder="Enter last name"
+                />
+              </div>
             </div>
             <div>
-              <Label htmlFor="addEmail">Email *</Label>
+              <Label htmlFor="addEmail">Email (Optional)</Label>
               <Input
                 id="addEmail"
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="Enter email address"
+                placeholder="Enter email address (auto-generated if empty)"
               />
             </div>
             <div>
@@ -599,7 +629,7 @@ export function Staff() {
             <div className="flex gap-2 pt-4">
               <Button 
                 onClick={handleCreateStaff} 
-                disabled={updating || !formData.name.trim() || !formData.email.trim()}
+                disabled={updating || !formData.firstName.trim() || !formData.lastName.trim()}
                 className="flex-1"
               >
                 {updating ? 'Adding...' : 'Add Staff Member'}
