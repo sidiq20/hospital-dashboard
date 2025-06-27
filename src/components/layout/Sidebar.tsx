@@ -9,7 +9,9 @@ import {
   LogOut,
   UsersIcon,
   FileText,
-  CheckCircle
+  CheckCircle,
+  Calendar,
+  CalendarCheck
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -45,6 +47,18 @@ const navigation = [
     href: '/my-cases',
     icon: CheckCircle,
     roles: ['consultant']
+  },
+  {
+    name: 'Upcoming Appointments',
+    href: '/upcoming-appointments',
+    icon: Calendar,
+    roles: ['doctor', 'consultant']
+  },
+  {
+    name: 'My Appointments',
+    href: '/my-appointments',
+    icon: CalendarCheck,
+    roles: ['doctor', 'consultant']
   },
   {
     name: 'Consultants',

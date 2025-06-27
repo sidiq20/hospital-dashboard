@@ -11,6 +11,8 @@ import { PatientDetails } from '@/pages/PatientDetails';
 import { EditPatient } from '@/pages/EditPatient';
 import { MyPatients } from '@/pages/MyPatients';
 import { MyCases } from '@/pages/MyCases';
+import { UpcomingAppointments } from '@/pages/UpcomingAppointments';
+import { MyAppointments } from '@/pages/MyAppointments';
 import { Consultants } from '@/pages/Consultants';
 import { Staff } from '@/pages/Staff';
 import { Reports } from '@/pages/Reports';
@@ -48,6 +50,8 @@ function AppContent() {
                   <Route path="/patients/:id/edit" element={<EditPatient />} />
                   <Route path="/my-patients" element={<MyPatients />} />
                   <Route path="/my-cases" element={<MyCases />} />
+                  <Route path="/upcoming-appointments" element={<UpcomingAppointments />} />
+                  <Route path="/my-appointments" element={<MyAppointments />} />
                   <Route path="/consultants" element={<Consultants />} />
                   <Route path="/staff" element={<Staff />} />
                   <Route path="/reports" element={<Reports />} />
