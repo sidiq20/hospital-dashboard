@@ -49,10 +49,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       role: userData.role || 'doctor',
       phone: userData.phone,
       department: userData.department,
+      specialization: userData.specialization,
       createdAt: new Date()
     };
     
-    await setDoc(doc(db, 'users', user.uid), userDoc);
+    try {
+      await setDoc(doc(db, 'users', user.uid), userDoc);
+    } catch (err) {
+      console.error("Failed to create user doc:", err)
+      throw err;
+    }
   };
 
   const logout = () => {
