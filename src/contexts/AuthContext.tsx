@@ -6,7 +6,7 @@ import {
   onAuthStateChanged,
   createUserWithEmailAndPassword
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { User } from '@/types';
 
@@ -34,45 +34,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // --- Login ---
   const login = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
-  };
-
-  const register = async (email: string, password: string, userData: Partial<User>) => {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
-    
-    const userDoc: User = {
-      id: user.uid,
-      email: user.email!,
-      name: userData.name || '',
-      role: userData.role || 'doctor',
-      phone: userData.phone,
-      department: userData.department,
-      specialization: userData.specialization,
-      createdAt: new Date()
-    };
-    
     try {
-      await setDoc(doc(db, 'users', user.uid), userDoc);
+      await signInWithEmailAndPassword(auth, email, password);
     } catch (err) {
-      console.error("Failed to create user doc:", err)
+      console.error("Login failed:", err);
       throw err;
     }
   };
 
-  const logout = () => {
-    return signOut(auth);
+  // --- Register ---
+  const register = async (email: string, password: string, userData: Partial<User>) => {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      const userDoc: User = {
+        id: user.uid,
+        email: user.email!,
+        name: userData.name || '',
+        role: userData.role || 'doctor',
+        phone: userData.phone || '',
+        department: userData.department || '',
+        specialization: userData.specialization || '',
+        createdAt: new Date()
+      };
+
+      await setDoc(doc(db, 'users', user.uid), userDoc);
+
+      // Immediately set local state so UI has profile without re-login
+      setUserProfile(userDoc);
+      setCurrentUser(user);
+    } catch (err) {
+      console.error("Registration failed:", err);
+      throw err;
+    }
   };
 
+  // --- Logout ---
+  const logout = async () => {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.error("Logout failed:", err);
+      throw err;
+    }
+  };
+
+  // --- Auth Listener ---
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setCurrentUser(user);
-        // Fetch user profile from Firestore
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          setUserProfile(userDoc.data() as User);
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            setUserProfile(userDoc.data() as User);
+          }
+        } catch (err) {
+          console.error("Failed to fetch user profile:", err);
         }
       } else {
         setCurrentUser(null);
