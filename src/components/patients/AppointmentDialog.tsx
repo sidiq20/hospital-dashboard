@@ -51,33 +51,33 @@ export function AppointmentDialog({ onScheduleAppointment, loading }: Appointmen
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="flex items-center gap-2 bg-white text-white border-gray-300 hover:bg-gray-100">
+        <Button variant="outline" className="flex items-center gap-2 bg-slate-800 text-white border-slate-700 hover:bg-slate-700">
           <Calendar className="h-4 w-4" />
-          Schedule Appointment
+          <span className="text-white">Schedule Appointment</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="bg-white border-gray-300">
+      <DialogContent className="bg-slate-900 border-slate-800 text-white">
         <DialogHeader>
-          <DialogTitle className="text-black">Schedule Appointment</DialogTitle>
+          <DialogTitle className="text-white">Schedule Appointment</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label htmlFor="appointmentTitle" className="text-black font-medium">Title</Label>
+            <Label htmlFor="appointmentTitle" className="text-slate-300 font-medium">Title</Label>
             <Input
               id="appointmentTitle"
               value={appointmentData.title}
               onChange={(e) => setAppointmentData(prev => ({ ...prev, title: e.target.value }))}
               placeholder="e.g., Follow-up consultation"
-              className="bg-white border-gray-300 text-black placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500"
+              className="bg-slate-950 border-slate-800 text-white placeholder-slate-500 focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
           <div>
-            <Label htmlFor="appointmentType" className="text-black font-medium">Type</Label>
+            <Label htmlFor="appointmentType" className="text-slate-300 font-medium">Type</Label>
             <select
               id="appointmentType"
               value={appointmentData.type}
               onChange={(e) => setAppointmentData(prev => ({ ...prev, type: e.target.value as any }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-black"
+              className="w-full px-3 py-2 border border-slate-800 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-950 text-white"
             >
               <option value="consultation">Consultation</option>
               <option value="procedure">Procedure</option>
@@ -87,17 +87,17 @@ export function AppointmentDialog({ onScheduleAppointment, loading }: Appointmen
             </select>
           </div>
           <div>
-            <Label htmlFor="scheduledDate" className="text-black font-medium">Date & Time</Label>
+            <Label htmlFor="scheduledDate" className="text-slate-300 font-medium">Date & Time</Label>
             <Input
               id="scheduledDate"
               type="datetime-local"
               value={appointmentData.scheduledDate}
               onChange={(e) => setAppointmentData(prev => ({ ...prev, scheduledDate: e.target.value }))}
-              className="bg-white border-gray-300 text-black focus:border-blue-500 focus:ring-blue-500"
+              className="bg-slate-950 border-slate-800 text-white focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
           <div>
-            <Label htmlFor="duration" className="text-black font-medium">Duration (minutes)</Label>
+            <Label htmlFor="duration" className="text-slate-300 font-medium">Duration (minutes)</Label>
             <Input
               id="duration"
               type="number"
@@ -105,18 +105,18 @@ export function AppointmentDialog({ onScheduleAppointment, loading }: Appointmen
               onChange={(e) => setAppointmentData(prev => ({ ...prev, duration: parseInt(e.target.value) }))}
               min="15"
               step="15"
-              className="bg-white border-gray-300 text-black focus:border-blue-500 focus:ring-blue-500"
+              className="bg-slate-950 border-slate-800 text-white focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
           <div>
-            <Label htmlFor="description" className="text-black font-medium">Description (Optional)</Label>
+            <Label htmlFor="description" className="text-slate-300 font-medium">Description (Optional)</Label>
             <Textarea
               id="description"
               value={appointmentData.description}
               onChange={(e) => setAppointmentData(prev => ({ ...prev, description: e.target.value }))}
               placeholder="Additional details about the appointment..."
               rows={3}
-              className="bg-white border-gray-300 text-black placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500"
+              className="bg-slate-950 border-slate-800 text-white placeholder-slate-500 focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
           <Button 

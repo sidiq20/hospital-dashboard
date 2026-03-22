@@ -49,8 +49,8 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isStaff();
       allow update: if isStaff();
-      // Only consultants can delete patients
-      allow delete: if isConsultant();
+      // Staff can delete patients (doctors can delete their own, etc.)
+      allow delete: if isStaff();
     }
     
     // Wards collection
@@ -68,5 +68,14 @@ service cloud.firestore {
       allow update: if isStaff();
       allow delete: if isStaff();
     }
+    
+    // Procedure Checklists collection
+    match /procedureChecklists/{checklistId} {
+      allow read: if isAuthenticated();
+      allow create: if isStaff();
+      allow update: if isStaff();
+      allow delete: if isStaff();
+    }
+
   }
 }

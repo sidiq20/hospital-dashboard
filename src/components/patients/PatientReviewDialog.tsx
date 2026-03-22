@@ -94,14 +94,14 @@ export function PatientReviewDialog({ onAddReview, loading }: PatientReviewDialo
       if (!isOpen) resetForm();
     }}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="flex items-center gap-2 bg-white text-white border-gray-300 hover:bg-gray-100">
+        <Button variant="outline" className="flex items-center gap-2 bg-slate-800 text-white border-slate-700 hover:bg-slate-700">
           <FileText className="h-4 w-4" />
           <span className="text-white">Add Review</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white border-gray-300">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-slate-900 border-slate-800 text-white">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-black text-xl">
+          <DialogTitle className="flex items-center gap-2 text-white text-xl">
             <FileText className="h-5 w-5" />
             Add Patient Review
           </DialogTitle>
@@ -111,25 +111,25 @@ export function PatientReviewDialog({ onAddReview, loading }: PatientReviewDialo
           {!selectedType ? (
             // Type Selection - List Style
             <div>
-              <h3 className="text-lg font-semibold text-black mb-4">Select Review Type</h3>
+              <h3 className="text-lg font-semibold text-white mb-4">Select Review Type</h3>
               <div className="space-y-3">
                 {reviewTypes.map((type) => {
                   const Icon = type.icon;
                   return (
                     <Card
                       key={type.value}
-                      className="cursor-pointer transition-all duration-200 hover:shadow-md bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50"
+                      className="cursor-pointer transition-all duration-200 hover:shadow-md bg-slate-950 border-slate-800 hover:border-blue-700 hover:bg-slate-900"
                       onClick={() => handleTypeSelect(type.value)}
                     >
-                      <CardContent className="p-4 bg-white">
+                      <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                              <Icon className="h-5 w-5 text-blue-600" />
+                            <div className="h-10 w-10 bg-blue-900/30 rounded-lg flex items-center justify-center">
+                              <Icon className="h-5 w-5 text-blue-400" />
                             </div>
                             <div>
-                              <h4 className="font-semibold text-black">{type.label}</h4>
-                              <p className="text-sm text-gray-600">{type.description}</p>
+                              <h4 className="font-semibold text-white">{type.label}</h4>
+                              <p className="text-sm text-slate-400">{type.description}</p>
                             </div>
                           </div>
                           <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700">
@@ -147,14 +147,14 @@ export function PatientReviewDialog({ onAddReview, loading }: PatientReviewDialo
             // Review Form
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-black">
+                <h3 className="text-lg font-semibold text-white">
                   {reviewTypes.find(t => t.value === selectedType)?.label} Review
                 </h3>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setSelectedType(null)}
-                  className="text-gray-600 hover:text-black hover:bg-gray-100"
+                  className="text-slate-400 hover:text-white hover:bg-slate-800"
                 >
                   <X className="h-4 w-4 mr-1" />
                   Change Type
@@ -162,9 +162,9 @@ export function PatientReviewDialog({ onAddReview, loading }: PatientReviewDialo
               </div>
 
               {/* Image Storage Warning - Red background */}
-              <Alert className="border-red-500 bg-black border-2">
-                <AlertTriangle className="h-4 w-4 text-red-600" />
-                <AlertDescription className="text-red-800 font-medium">
+              <Alert className="border-red-900 bg-red-950/20 border-2">
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+                <AlertDescription className="text-red-200 font-medium">
                   <strong>Note:</strong> Image storage is currently unavailable. Only text content will be saved.
                 </AlertDescription>
               </Alert>
@@ -172,45 +172,45 @@ export function PatientReviewDialog({ onAddReview, loading }: PatientReviewDialo
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="reviewTitle" className="text-black font-medium">Title *</Label>
+                    <Label htmlFor="reviewTitle" className="text-slate-300 font-medium">Title *</Label>
                     <Input
                       id="reviewTitle"
                       value={reviewData.title}
                       onChange={(e) => setReviewData(prev => ({ ...prev, title: e.target.value }))}
                       placeholder="Enter review title"
-                      className="bg-white border-gray-300 text-black placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                      className="bg-slate-950 border-slate-800 text-white placeholder-slate-500 focus:border-blue-500 focus:ring-blue-500"
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="reviewDescription" className="text-black font-medium">Description</Label>
+                    <Label htmlFor="reviewDescription" className="text-slate-300 font-medium">Description</Label>
                     <Textarea
                       id="reviewDescription"
                       value={reviewData.description}
                       onChange={(e) => setReviewData(prev => ({ ...prev, description: e.target.value }))}
                       placeholder="Enter description or notes..."
                       rows={3}
-                      className="bg-white border-gray-300 text-black placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                      className="bg-slate-950 border-slate-800 text-white placeholder-slate-500 focus:border-blue-500 focus:ring-blue-500"
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="reviewContent" className="text-black font-medium">Additional Notes</Label>
+                    <Label htmlFor="reviewContent" className="text-slate-300 font-medium">Additional Notes</Label>
                     <Textarea
                       id="reviewContent"
                       value={reviewData.textContent}
                       onChange={(e) => setReviewData(prev => ({ ...prev, textContent: e.target.value }))}
                       placeholder="Enter detailed findings, observations, or results..."
                       rows={4}
-                      className="bg-white border-gray-300 text-black placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                      className="bg-slate-950 border-slate-800 text-white placeholder-slate-500 focus:border-blue-500 focus:ring-blue-500"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <div>
-                    <Label className="text-black font-medium">Images (Currently Unavailable)</Label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
+                    <Label className="text-slate-300 font-medium">Images (Currently Unavailable)</Label>
+                    <div className="border-2 border-dashed border-slate-800 rounded-lg p-6 text-center bg-slate-950">
                       <input
                         type="file"
                         multiple
@@ -221,11 +221,11 @@ export function PatientReviewDialog({ onAddReview, loading }: PatientReviewDialo
                         disabled
                       />
                       <label htmlFor="image-upload" className="cursor-not-allowed">
-                        <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-gray-500 text-sm">
+                        <Upload className="h-8 w-8 text-slate-600 mx-auto mb-2" />
+                        <p className="text-slate-500 text-sm">
                           Image upload temporarily disabled
                         </p>
-                        <p className="text-gray-400 text-xs mt-1">
+                        <p className="text-slate-600 text-xs mt-1">
                           Server space not found
                         </p>
                       </label>
@@ -234,14 +234,14 @@ export function PatientReviewDialog({ onAddReview, loading }: PatientReviewDialo
 
                   {selectedImages.length > 0 && (
                     <div>
-                      <Label className="text-black font-medium">Selected Images ({selectedImages.length})</Label>
+                      <Label className="text-slate-300 font-medium">Selected Images ({selectedImages.length})</Label>
                       <div className="space-y-2 max-h-40 overflow-y-auto">
                         {selectedImages.map((file, index) => (
-                          <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded border border-gray-200">
+                          <div key={index} className="flex items-center justify-between bg-slate-950 p-2 rounded border border-slate-800">
                             <div className="flex items-center gap-2">
-                              <ImageIcon className="h-4 w-4 text-gray-500" />
-                              <span className="text-sm text-black truncate">{file.name}</span>
-                              <span className="text-xs text-gray-500">
+                              <ImageIcon className="h-4 w-4 text-slate-400" />
+                              <span className="text-sm text-white truncate">{file.name}</span>
+                              <span className="text-xs text-slate-500">
                                 ({(file.size / 1024 / 1024).toFixed(1)} MB)
                               </span>
                             </div>
@@ -249,7 +249,7 @@ export function PatientReviewDialog({ onAddReview, loading }: PatientReviewDialo
                               variant="ghost"
                               size="sm"
                               onClick={() => removeImage(index)}
-                              className="text-red-500 hover:text-red-700 hover:bg-red-50 h-6 w-6 p-0"
+                              className="text-red-400 hover:text-red-300 hover:bg-red-900/20 h-6 w-6 p-0"
                             >
                               <X className="h-3 w-3" />
                             </Button>
@@ -261,7 +261,7 @@ export function PatientReviewDialog({ onAddReview, loading }: PatientReviewDialo
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-4 border-t border-gray-200">
+              <div className="flex gap-3 pt-4 border-t border-slate-800">
                 <Button 
                   onClick={handleSubmit} 
                   disabled={loading || !reviewData.title.trim()}
@@ -273,7 +273,7 @@ export function PatientReviewDialog({ onAddReview, loading }: PatientReviewDialo
                   variant="outline" 
                   onClick={() => setOpen(false)}
                   disabled={loading}
-                  className="bg-white text-black border-gray-300 hover:bg-gray-100"
+                  className="bg-slate-800 text-white border-slate-700 hover:bg-slate-700"
                 >
                   Cancel
                 </Button>

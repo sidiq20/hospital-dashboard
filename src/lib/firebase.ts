@@ -1,7 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getAnalytics } from "firebase/analytics";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCR2tmPmf7A4sSLsbNUyuJwiv8EjOOjXNc",
@@ -19,6 +18,16 @@ const app = initializeApp(firebaseConfig);
 // Initialize Firebase services
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const analytics = getAnalytics(app);
 
+// Analytics is only supported in client environments
+let analytics = null;
+if (typeof window !== "undefined") {
+  import('firebase/analytics').then(({ getAnalytics, isSupported }) => {
+    isSupported().then(supported => {
+      if (supported) analytics = getAnalytics(app);
+    });
+  });
+}
+
+export { analytics };
 export default app;

@@ -36,23 +36,23 @@ export function PatientNoteDialog({ onAddNote, loading }: PatientNoteDialogProps
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="flex items-center gap-2 bg-white text-white border-gray-300 hover:bg-gray-100">
+        <Button variant="outline" className="flex items-center gap-2 bg-slate-800 text-white border-slate-700 hover:bg-slate-700">
           <MessageSquare className="h-4 w-4" />
-          Add Note
+          <span className="text-white">Add Note</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="bg-white border-gray-300">
+      <DialogContent className="bg-slate-900 border-slate-800 text-white">
         <DialogHeader>
           <DialogTitle className="text-white">Add Patient Note</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label htmlFor="noteType" className="text-black font-medium">Note Type</Label>
+            <Label htmlFor="noteType" className="text-slate-300 font-medium">Note Type</Label>
             <select
               id="noteType"
               value={noteType}
               onChange={(e) => setNoteType(e.target.value as any)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-black"
+              className="w-full px-3 py-2 border border-slate-800 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-950 text-white"
             >
               <option value="general">General</option>
               <option value="medical">Medical</option>
@@ -61,14 +61,14 @@ export function PatientNoteDialog({ onAddNote, loading }: PatientNoteDialogProps
             </select>
           </div>
           <div>
-            <Label htmlFor="noteContent" className="text-black font-medium">Note Content</Label>
+            <Label htmlFor="noteContent" className="text-slate-300 font-medium">Note Content</Label>
             <Textarea
               id="noteContent"
               value={noteContent}
               onChange={(e) => setNoteContent(e.target.value)}
               placeholder="Enter your note here..."
               rows={4}
-              className="bg-white border-gray-300 text-black placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500"
+              className="bg-slate-950 border-slate-800 text-white placeholder-slate-500 focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
           <Button 

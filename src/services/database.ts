@@ -9,11 +9,12 @@ import {
   query, 
   orderBy, 
   onSnapshot,
-  arrayUnion
+  arrayUnion,
+  where
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { removeUndefined } from '@/lib/utils';
-import { Patient, Ward, User, DashboardStats, PatientNote, Appointment, BiopsyResult, PatientReview, ProcedureAnalytics } from '@/types';
+import { Patient, Ward, User, DashboardStats, PatientNote, Appointment, BiopsyResult, PatientReview, ProcedureAnalytics, ProcedureChecklist } from '@/types';
 
 // Helper function to safely convert Firestore timestamps
 const convertTimestamp = (timestamp: any): Date => {
@@ -494,3 +495,77 @@ export const createUser = async (userData: Omit<User, 'id' | 'createdAt'>) => {
     throw error;
   }
 };
+
+// Procedure Checklists
+export const saveProcedureChecklist = async (checklist: Omit<ProcedureChecklist, 'id'>) => {
+  try {
+    const checklistData = removeUndefined({
+      ...checklist,
+      createdAt: new Date()
+    });
+    const docRef = await addDoc(collection(db, 'procedureChecklists'), checklistData);
+    return docRef.id;
+  } catch (error) {
+    console.error('Error saving procedure checklist:', error);
+    throw error;
+  }
+};
+
+export const getProcedureChecklists = async (patientId: string): Promise<ProcedureChecklist[]> => {
+  try {
+    const q = query(
+      collection(db, 'procedureChecklists'), 
+      where('patientId', '==', patientId), 
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        date: convertTimestamp(data.date),
+        createdAt: convertTimestamp(data.createdAt)
+      };
+    }) as ProcedureChecklist[];
+  } catch (error) {
+    console.error('Error getting procedure checklists:', error);
+    throw error;
+  }
+};
+
+export const getProcedureChecklist = async (id: string): Promise<ProcedureChecklist | null> => {
+  try {
+    const docRef = doc(db, 'procedureChecklists', id);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      return {
+        id: docSnap.id,
+        ...data,
+        date: convertTimestamp(data.date),
+        createdAt: convertTimestamp(data.createdAt)
+      } as ProcedureChecklist;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting procedure checklist:', error);
+    throw error;
+  }
+};
+
+export const updateProcedureChecklist = async (id: string, updates: Partial<ProcedureChecklist>) => {
+  try {
+    const docRef = doc(db, 'procedureChecklists', id);
+    const cleanedUpdates = removeUndefined({
+      ...updates,
+      updatedAt: new Date()
+    });
+    
+    await updateDoc(docRef, cleanedUpdates);
+  } catch (error) {
+    console.error('Error updating procedure checklist:', error);
+    throw error;
+  }
+};

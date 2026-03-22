@@ -179,3 +179,39 @@ export interface ExportData {
     type: 'day' | 'week' | 'month' | 'year' | 'custom';
   };
 }
+
+export interface ProcedureChecklist {
+  id: string;
+  patientId: string;
+  patientName: string;
+  age: string;
+  gender: string;
+  procedure: string;
+  indication: string;
+  diagnosis: string;
+  date: Date;
+  radiologicalDiagnosis?: string;
+  pathologicalDiagnosis?: string;
+  procedureNote?: string;
+  preProcedureVitals: {
+    bp: string;
+    pulse: string;
+    spo2: string;
+    temp: string;
+  };
+  sections: {
+    preProcedure: ChecklistItem[];
+    procedure: ChecklistItem[];
+    postProcedure: ChecklistItem[];
+  };
+  createdBy: string;
+  createdByName: string;
+  createdAt: Date;
+}
+
+export interface ChecklistItem {
+  id: string;
+  label: string;
+  status: 'yes' | 'no' | 'n/a';
+  comments?: string;
+}
