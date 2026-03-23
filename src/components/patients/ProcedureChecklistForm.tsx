@@ -66,7 +66,8 @@ const PRE_PROCEDURE_ITEMS = [
   "Anaestesia / Analgesia",
   "Post interventional bed or admission",
   "Other lab result (FBC)",
-  "HIV positive"
+  "HIV positive",
+  "Random blood sugar (RBS)"
 ];
 
 const PROCEDURE_ITEMS = [
