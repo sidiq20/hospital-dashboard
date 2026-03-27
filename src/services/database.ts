@@ -61,6 +61,12 @@ const convertPatientData = (data: any): Patient => {
 // Patients
 export const createPatient = async (patient: Omit<Patient, 'id' | 'createdAt' | 'updatedAt'>, doctorId?: string, doctorName?: string) => {
   try {
+    if (!doctorId || !doctorName) {
+      console.warn('createPatient called without doctorId or doctorName. Patient may not be associated with a staff member.');
+      // We don't throw here to allow flexibility, but we log a warning.
+      // However, Firestore rules will likely block this if isStaff() fails.
+    }
+
     const patientData = removeUndefined({
       ...patient,
       notes: patient.notes || [],

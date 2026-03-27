@@ -41,24 +41,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const register = async (email: string, password: string, userData: Partial<User>) => {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
-    
-    const userDoc: User = {
-      id: user.uid,
-      email: user.email!,
-      name: userData.name || '',
-      role: userData.role || 'doctor',
-      phone: userData.phone,
-      department: userData.department,
-      specialization: userData.specialization,
-      createdAt: new Date()
-    };
-    
     try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      const userDoc: User = {
+        id: user.uid,
+        email: user.email!,
+        name: userData.name || '',
+        role: userData.role || 'doctor',
+        phone: userData.phone,
+        department: userData.department,
+        specialization: userData.specialization,
+        createdAt: new Date()
+      };
+      
       await setDoc(doc(db, 'users', user.uid), userDoc);
+      
+      // Manually set user profile immediately so the app doesn't have to wait for onAuthStateChanged
+      setUserProfile(userDoc);
+      setCurrentUser(user);
     } catch (err) {
-      console.error("Failed to create user doc:", err)
+      console.error("Registration failed:", err);
       throw err;
     }
   };

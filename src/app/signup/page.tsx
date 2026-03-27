@@ -28,11 +28,14 @@ export default function SignupPage() {
   const { register, currentUser } = useAuth();
   const router = useRouter();
 
+  // Redirect handled in handleSubmit after successful registration
+  /* 
   useEffect(() => {
     if (currentUser) {
       router.push('/');
     }
   }, [currentUser, router]);
+  */
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
